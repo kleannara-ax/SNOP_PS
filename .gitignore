@@ -1,0 +1,23 @@
+# 데이터 파일 (서버 런타임 생성)
+data/
+
+# 서버 로그
+server.log
+supervisord.log
+supervisord.pid
+supervisor.sock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

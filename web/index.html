@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS S&OP 계획 시스템</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="app-header">
+    <div class="header-container">
+        <div class="header-text">
+            <h1>PS S&OP 계획 시스템</h1>
+            <p>PS사업부 통합 판매·생산·재고 계획 관리</p>
+        </div>
+        <div class="header-actions">
+            <span id="user-display" style="display:flex;align-items:center;gap:8px;font-size:0.9rem;color:#64748b;">
+                <strong id="user-name-display" style="color:#1f2937;">관리자</strong>님 환영합니다
+            </span>
+            <button class="ghost" id="btn-logout" onclick="location.href='login.html'">로그아웃</button>
+        </div>
+    </div>
+</header>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main>
+
+    <!-- ── 탭 네비게이션 ── -->
+    <nav class="view-tabs" id="view-tabs">
+        <button class="view-tab active" data-view="summary">통합 계획 요약</button>
+        <button class="view-tab" data-view="planner">진부화재고</button>
+        <button class="view-tab" data-view="sales-upload">판매계획 업로드</button>
+        <button class="view-tab" data-view="table">생산계획 현황</button>
+        <button class="view-tab" data-view="line-capa">생산 CAPA 현황</button>
+        <button class="view-tab" data-view="dashboard">계획 대비 실적 현황</button>
+        <button class="view-tab" data-view="analytics">재고 분석 대시보드</button>
+        <button class="view-tab" data-view="optimal-inventory">적정재고관리</button>
+        <button class="view-tab" data-view="change-history">변경 이력 관리</button>
+        <button class="view-tab" data-view="interface-mgmt">인터페이스 관리</button>
+        <button class="view-tab" data-view="user-mgmt">사용자 관리</button>
+    </nav>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 1: 통합 계획 요약                          -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-summary" aria-hidden="false">
+
+        <div class="summary-meta">
+            <div class="summary-context" id="summary-month-context">2026-04</div>
+        </div>
+
+        <div class="summary-section">
+            <!-- Card 1 -->
+            <div class="summary-card">
+                <h3>재고 부족 자재 수</h3>
+                <p class="summary-value" id="summary-inventory-alert">0<span style="font-size:1rem;font-weight:400;margin-left:4px;">개</span></p>
+                <p class="summary-sub">목표 월말재고 대비 부족 자재</p>
+                <div class="summary-breakdown" id="summary-inventory-shortage-breakdown"></div>
+            </div>
+            <!-- Card 2 -->
+            <div class="summary-card">
+                <h3>과재고 자재 수</h3>
+                <p class="summary-value" id="summary-overstock">0<span style="font-size:1rem;font-weight:400;margin-left:4px;">개</span></p>
+                <p class="summary-sub">적정재고 대비 150% 초과 자재</p>
+                <div class="summary-breakdown" id="summary-inventory-overstock-breakdown"></div>
+            </div>
+            <!-- Card 3 -->
+            <div class="summary-card">
+                <h3>CAPA 초과 라인 수</h3>
+                <p class="summary-value" id="summary-capa-alert">0<span style="font-size:1rem;font-weight:400;margin-left:4px;">개</span></p>
+                <p class="summary-sub">라인 생산능력 초과 현황</p>
+                <div class="summary-breakdown" id="summary-capa-breakdown"></div>
+            </div>
+            <!-- Card 4 -->
+            <div class="summary-card">
+                <h3>총 생산 계획 물량</h3>
+                <p class="summary-value" id="summary-total-production">0<span style="font-size:1rem;font-weight:400;margin-left:4px;">EA</span></p>
+                <p class="summary-sub">당월 전체 생산 계획 합계</p>
+                <div class="summary-breakdown" id="summary-total-production-breakdown"></div>
+            </div>
+            <!-- Card 5 -->
+            <div class="summary-card">
+                <h3>평균 CAPA 가동률</h3>
+                <p class="summary-value" id="summary-avg-capa">-<span style="font-size:1rem;font-weight:400;margin-left:4px;">%</span></p>
+                <p class="summary-sub">전체 라인 평균 가동률</p>
+                <div class="summary-breakdown" id="summary-avg-capa-breakdown"></div>
+            </div>
+            <!-- Card 6 -->
+            <div class="summary-card">
+                <h3>판매 계획 달성률</h3>
+                <p class="summary-value" id="summary-sales-accuracy">-<span style="font-size:1rem;font-weight:400;margin-left:4px;">%</span></p>
+                <p class="summary-sub" id="summary-sales-accuracy-caption">판매실적 / 판매계획</p>
+                <div class="summary-breakdown" id="summary-sales-accuracy-breakdown"></div>
+            </div>
+            <!-- Card 7 -->
+            <div class="summary-card">
+                <h3>생산 계획 달성률</h3>
+                <p class="summary-value" id="summary-production-accuracy">-<span style="font-size:1rem;font-weight:400;margin-left:4px;">%</span></p>
+                <p class="summary-sub" id="summary-production-accuracy-caption">생산실적 / 생산계획</p>
+                <div class="summary-breakdown" id="summary-production-accuracy-breakdown"></div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 2: 기준정보 관리                            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-planner" aria-hidden="true" style="display:none;">
+
+        <!-- 서브탭 -->
+        <nav class="planner-sub-tabs" id="planner-sub-tabs">
+            <button class="planner-sub-tab active" data-sub="obsolete-status">진부화재고 현황</button>
+            <button class="planner-sub-tab" data-sub="obsolete-list">진부화재고 리스트</button>
+        </nav>
+
+        <!-- 진부화재고 현황 -->
+        <div class="planner-sub-section active" data-sub-panel="obsolete-status">
+
+            <!-- 화이트카드 -->
+            <div class="obsolete-list-card">
+                <div class="obsolete-list-card-header">
+                    <div class="obsolete-list-card-title-area">
+                        <h3>진부화재고 현황</h3>
+                        <p class="obsolete-list-date" id="obsolete-status-date"></p>
+                    </div>
+                    <div class="obsolete-list-card-actions">
+                        <button class="ghost" id="btn-export-status-xlsx">엑셀 다운로드</button>
+                    </div>
+                </div>
+
+                <!-- 조건 필터 -->
+                <div class="filter-bar" id="obsolete-status-filter-bar">
+                    <div class="filter-group">
+                        <label for="filter-domestic-export">내수/수출</label>
+                        <select id="filter-domestic-export">
+                            <option value="">전체</option>
+                            <option value="내수">내수</option>
+                            <option value="수출">수출</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-form-type">롤/시트/상품</label>
+                        <select id="filter-form-type">
+                            <option value="">전체</option>
+                            <option value="롤">롤</option>
+                            <option value="시트">시트</option>
+                            <option value="상품">상품</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-paper-type">지종</label>
+                        <select id="filter-paper-type">
+                            <option value="">전체</option>
+                            <!-- 자재코드 기반 동적 생성 -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-basis-weight">평량</label>
+                        <select id="filter-basis-weight">
+                            <option value="">전체</option>
+                            <!-- 자재코드 기반 동적 생성 -->
+                        </select>
+                    </div>
+                    <button class="filter-reset-btn" id="btn-filter-reset">초기화</button>
+                </div>
+
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="obsolete-list-table" id="obsolete-status-table">
+                            <colgroup>
+                                <col class="col-material">
+                                <col class="col-domestic">
+                                <col class="col-form">
+                                <col class="col-product">
+                                <col class="col-paper">
+                                <col class="col-weight">
+                                <col class="col-obsolete">
+                                <col class="col-out-total">
+                                <col class="col-remain">
+                                <col class="col-rate">
+                                <col class="col-complete">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>자재코드</th>
+                                    <th>내수/수출</th>
+                                    <th>롤/시트/상품</th>
+                                    <th>상품/제품</th>
+                                    <th>지종</th>
+                                    <th>평량</th>
+                                    <th>진부화재고</th>
+                                    <th>출고계</th>
+                                    <th>예상잔량</th>
+                                    <th>소진율</th>
+                                    <th>완료여부</th>
+                                </tr>
+                            </thead>
+                            <tbody id="obsolete-status-tbody">
+                                <tr>
+                                    <td class="material-code-cell">F3SM1280-08251120B</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="material-code-cell">F3SM2150-10120930A</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="material-code-cell">H2RL1120-05180740C</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="material-code-cell">S1PB2250-12050320D</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="material-code-cell">H4ST1150-07091050E</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="material-code-cell">F2AR2080-03150620F</td>
+                                    <td class="domestic-export-cell"></td>
+                                    <td class="form-type-cell"></td>
+                                    <td class="product-type-cell"></td>
+                                    <td class="paper-type-cell"></td>
+                                    <td class="basis-weight-cell"></td>
+                                    <td class="obsolete-stock-cell"></td>
+                                    <td class="status-out-total-cell"></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 진부화재고 리스트 -->
+        <div class="planner-sub-section" data-sub-panel="obsolete-list">
+
+            <!-- 화이트카드 -->
+            <div class="obsolete-list-card">
+                <div class="obsolete-list-card-header">
+                    <div class="obsolete-list-card-title-area">
+                        <h3>자재별 진부화재고 리스트</h3>
+                        <p class="obsolete-list-date" id="obsolete-list-date"></p>
+                    </div>
+                    <div class="obsolete-list-card-actions">
+                        <span class="save-status" id="save-status"></span>
+                        <button class="primary" id="btn-save-obsolete-list" disabled>저장</button>
+                    </div>
+                </div>
+
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="obsolete-list-table" id="obsolete-list-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="freeze-col freeze-col-1">플랜트</th>
+                                    <th rowspan="2" class="freeze-col freeze-col-2">자재코드</th>
+                                    <th colspan="3" class="col-group-a col-group-last">기초</th>
+                                    <th colspan="3" class="col-group-b col-group-last">예정</th>
+                                    <th colspan="3" class="col-group-c col-group-last">합계</th>
+                                    <th rowspan="2">현재고</th>
+                                    <th rowspan="2">매출<br><span style="font-weight:500;font-size:0.75rem;color:#64748b;">(수정)</span></th>
+                                    <th rowspan="2">밀롤<br><span style="font-weight:500;font-size:0.75rem;color:#64748b;">(수정)</span></th>
+                                    <th rowspan="2">폐기</th>
+                                    <th rowspan="2">기타출고<br><span style="font-weight:500;font-size:0.75rem;color:#64748b;">(수정)</span></th>
+                                    <th rowspan="2">출고계</th>
+                                    <th rowspan="2">예상잔량</th>
+                                    <th rowspan="2">소진율</th>
+                                    <th rowspan="2" class="col-group-last">완료여부</th>
+                                    <th rowspan="2">매출</th>
+                                    <th rowspan="2">밀롤</th>
+                                    <th rowspan="2">기타출고</th>
+                                    <th rowspan="2">기타출고<br>반영</th>
+                                </tr>
+                                <tr>
+                                    <!-- 연수 기준 -->
+                                    <th class="col-group-a">연수</th>
+                                    <th class="col-group-a">중량(톤)</th>
+                                    <th class="col-group-a col-group-last">금액(백만)</th>
+                                    <!-- 중량 기준 -->
+                                    <th class="col-group-b">연수</th>
+                                    <th class="col-group-b">중량(톤)</th>
+                                    <th class="col-group-b col-group-last">금액(백만)</th>
+                                    <!-- 금액 기준 -->
+                                    <th class="col-group-c">연수</th>
+                                    <th class="col-group-c">중량(톤)</th>
+                                    <th class="col-group-c col-group-last">금액(백만)</th>
+                                    <!-- (출고 계획 4개는 1행 rowspan으로 이동) -->
+                                    <!-- (기타 출고 4개는 1행 rowspan으로 이동) -->
+                                </tr>
+                            </thead>
+                            <tbody id="obsolete-list-tbody">
+                                <!-- Row 1 -->
+                                <tr data-plant="PS10" data-material="F3SM1280-08251120B">
+                                    <td class="freeze-col freeze-col-1">PS10</td>
+                                    <td class="freeze-col freeze-col-2">F3SM1280-08251120B</td>
+                                    <td>3</td>
+                                    <td>12.5</td>
+                                    <td class="col-group-last">48.2</td>
+                                    <td>2</td>
+                                    <td>8.3</td>
+                                    <td class="col-group-last">32.1</td>
+                                    <td class="total-age-cell">5</td>
+                                    <td class="total-weight-cell">20.8</td>
+                                    <td class="col-group-last total-amount-cell">80.3</td>
+                                    <td class="current-stock-cell">4,200</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="1,200" data-origin="1,200"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="600" data-origin="600"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0" data-origin="0"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>1,200</td>
+                                    <td>600</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                                <!-- Row 2 -->
+                                <tr data-plant="PS10" data-material="F3SM2150-10120930A">
+                                    <td class="freeze-col freeze-col-1">PS10</td>
+                                    <td class="freeze-col freeze-col-2">F3SM2150-10120930A</td>
+                                    <td>5</td>
+                                    <td>25.0</td>
+                                    <td class="col-group-last">96.5</td>
+                                    <td>1</td>
+                                    <td>5.0</td>
+                                    <td class="col-group-last">18.7</td>
+                                    <td class="total-age-cell">6</td>
+                                    <td class="total-weight-cell">30.0</td>
+                                    <td class="col-group-last total-amount-cell">115.2</td>
+                                    <td class="current-stock-cell">8,500</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="3.5" data-origin="3.5"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="1.2" data-origin="1.2"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0" data-origin="0"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>3.5</td>
+                                    <td>1.2</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                                <!-- Row 3 -->
+                                <tr data-plant="PS10" data-material="H2RL1120-05180740C">
+                                    <td class="freeze-col freeze-col-1">PS10</td>
+                                    <td class="freeze-col freeze-col-2">H2RL1120-05180740C</td>
+                                    <td>4</td>
+                                    <td>18.3</td>
+                                    <td class="col-group-last">72.4</td>
+                                    <td>3</td>
+                                    <td>12.0</td>
+                                    <td class="col-group-last">45.6</td>
+                                    <td class="total-age-cell">7</td>
+                                    <td class="total-weight-cell">30.3</td>
+                                    <td class="col-group-last total-amount-cell">118.0</td>
+                                    <td class="current-stock-cell">3,100</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="15" data-origin="15"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="8.5" data-origin="8.5"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="2" data-origin="2"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>15</td>
+                                    <td>8.5</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                                <!-- Row 4 -->
+                                <tr data-plant="PS20" data-material="S1PB2250-12050320D">
+                                    <td class="freeze-col freeze-col-1">PS20</td>
+                                    <td class="freeze-col freeze-col-2">S1PB2250-12050320D</td>
+                                    <td>1</td>
+                                    <td>6.8</td>
+                                    <td class="col-group-last">24.1</td>
+                                    <td>1</td>
+                                    <td>3.2</td>
+                                    <td class="col-group-last">11.9</td>
+                                    <td class="total-age-cell">2</td>
+                                    <td class="total-weight-cell">10.0</td>
+                                    <td class="col-group-last total-amount-cell">36.0</td>
+                                    <td class="current-stock-cell">1,200</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0" data-origin="0"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0" data-origin="0"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0" data-origin="0"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>0</td>
+                                    <td>0</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                                <!-- Row 5 -->
+                                <tr data-plant="PS20" data-material="H4ST1150-07091050E">
+                                    <td class="freeze-col freeze-col-1">PS20</td>
+                                    <td class="freeze-col freeze-col-2">H4ST1150-07091050E</td>
+                                    <td>6</td>
+                                    <td>32.0</td>
+                                    <td class="col-group-last">128.5</td>
+                                    <td>2</td>
+                                    <td>10.0</td>
+                                    <td class="col-group-last">38.0</td>
+                                    <td class="total-age-cell">8</td>
+                                    <td class="total-weight-cell">42.0</td>
+                                    <td class="col-group-last total-amount-cell">166.5</td>
+                                    <td class="current-stock-cell">950</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="28" data-origin="28"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="12" data-origin="12"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="1.5" data-origin="1.5"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>28</td>
+                                    <td>12</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                                <!-- Row 6: 기타출고 음수 샘플 (현재고 10 < 예상잔량 46.5 → 기타출고 -36.5) -->
+                                <tr data-plant="PS20" data-material="F2AR2080-03150620F">
+                                    <td class="freeze-col freeze-col-1">PS20</td>
+                                    <td class="freeze-col freeze-col-2">F2AR2080-03150620F</td>
+                                    <td>7</td>
+                                    <td>38.0</td>
+                                    <td class="col-group-last">145.0</td>
+                                    <td>3</td>
+                                    <td>12.0</td>
+                                    <td class="col-group-last">42.5</td>
+                                    <td class="total-age-cell">10</td>
+                                    <td class="total-weight-cell">50.0</td>
+                                    <td class="col-group-last total-amount-cell">187.5</td>
+                                    <td class="current-stock-cell">10</td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="2" data-origin="2"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="1" data-origin="1"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="0.5" data-origin="0.5"></td>
+                                    <td class="editable-cell"><input type="text" class="cell-input out-field" value="" data-origin=""></td>
+                                    <td class="out-total-cell"></td>
+                                    <td class="expected-remain-cell"></td>
+                                    <td class="consume-rate-cell"></td>
+                                    <td class="col-group-last complete-yn-cell"></td>
+                                    <td>2</td>
+                                    <td>1</td>
+                                    <td class="etc-out-cell"></td>
+                                    <td class="etc-out-reflect-cell"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 3: 판매계획 업로드                          -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-sales-upload" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>판매계획 업로드</h2>
+            <p>채널별 판매계획을 엑셀 파일로 업로드하거나 수기로 등록합니다.</p>
+        </div>
+        <div class="sales-upload-section">
+            <div class="sales-upload-layout">
+                <div class="sales-upload-controls">
+                    <div class="sales-upload-card">
+                        <h3>파일 업로드</h3>
+                        <p>엑셀(.xlsx) 파일을 선택하여 판매계획을 일괄 등록합니다.</p>
+                        <div class="sales-upload-actions">
+                            <input type="file" id="sales-file-input" accept=".xlsx,.xls,.csv" disabled>
+                            <button class="primary" id="btn-sales-upload-start" disabled>업로드</button>
+                            <button class="ghost" id="btn-sales-template" disabled>템플릿 다운로드</button>
+                        </div>
+                        <div class="sales-status" id="sales-upload-status">데이터 연동 후 사용 가능합니다.</div>
+                    </div>
+                    <div class="sales-upload-card">
+                        <h3>채널 관리</h3>
+                        <p>판매 채널을 등록하고 관리합니다.</p>
+                        <div id="sales-channel-list" class="channel-master-list">
+                            <p id="sales-channel-empty" class="muted" style="font-size:0.9rem;">등록된 채널이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="sales-upload-data">
+                    <div class="sales-summary-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>판매계획 요약</h3>
+                                <p>자재별·월별 판매계획 집계 현황</p>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <p id="sales-summary-empty" class="muted" style="text-align:center;padding:40px 0;">등록된 판매계획이 없습니다.</p>
+                        </div>
+                    </div>
+                    <div class="sales-upload-list">
+                        <div class="panel-header">
+                            <div>
+                                <h3>업로드 상세 내역</h3>
+                                <p>개별 업로드 건별 상세 내역</p>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <p id="sales-upload-empty" class="muted" style="text-align:center;padding:40px 0;">업로드된 데이터가 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 4: 생산계획 현황                            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-table" aria-hidden="true" style="display:none;">
+        <div class="section-header planner-header">
+            <div>
+                <h2>생산계획 현황</h2>
+                <p>자재별 월별 생산계획, 판매실적, 재고현황을 조회합니다.</p>
+            </div>
+            <button class="primary" id="btn-export-xlsx" disabled>엑셀 다운로드</button>
+        </div>
+
+        <div class="table-filters">
+            <div class="filters">
+                <label>
+                    자재 검색
+                    <input type="text" id="filter-item" placeholder="자재코드 또는 자재명">
+                </label>
+                <label>
+                    계획월
+                    <select id="filter-month">
+                        <option value="all">전체</option>
+                    </select>
+                </label>
+                <label>
+                    생산라인
+                    <select id="filter-line">
+                        <option value="all">전체</option>
+                    </select>
+                </label>
+                <label>
+                    재고 상태
+                    <select id="filter-inventory-status">
+                        <option value="all">전체</option>
+                        <option value="shortage">부족</option>
+                        <option value="overstock">과재고</option>
+                        <option value="normal">정상</option>
+                    </select>
+                </label>
+                <label>
+                    CAPA 상태
+                    <select id="filter-capa-status">
+                        <option value="all">전체</option>
+                        <option value="over">초과</option>
+                        <option value="normal">적정</option>
+                        <option value="under">여유</option>
+                    </select>
+                </label>
+                <div class="filter-actions">
+                    <button class="primary" id="btn-apply-filters">검색</button>
+                    <button class="ghost" id="btn-clear-filters">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-scroll-container">
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <table id="plan-table" style="width:100%;border-collapse:collapse;min-width:1400px;">
+                    <thead>
+                        <tr>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">계획월</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">우선순위</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">카테고리</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">자재코드</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">자재명</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">생산라인</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">현재고</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">판매계획</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">판매실적</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">생산계획</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">생산실적</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">잔여생산</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">목표월말재고</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">CAPA</th>
+                            <th style="padding:12px 10px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;position:sticky;top:0;z-index:2;">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="15" style="text-align:center;padding:60px 20px;color:#94a3b8;border:1px solid rgba(226,232,240,0.8);">
+                                등록된 생산계획이 없습니다. 데이터를 등록하면 여기에 표시됩니다.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 5: 생산 CAPA 현황                          -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-line-capa" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>생산 CAPA 현황</h2>
+            <p>라인별 생산능력(CAPA) 대비 계획 물량 현황을 모니터링합니다.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+            <!-- Usage Panel -->
+            <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+                <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">CAPA 사용률 현황</h3>
+                <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 월간 CAPA 사용률을 차트로 확인합니다.</p>
+                <div style="height:300px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
+                    <canvas id="line-capa-usage-chart"></canvas>
+                </div>
+                <p id="line-capa-usage-empty" style="text-align:center;color:#94a3b8;font-size:0.9rem;">데이터를 등록하면 차트가 표시됩니다.</p>
+            </div>
+            <!-- Cards -->
+            <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+                <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">라인별 CAPA 카드</h3>
+                <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 가동률 및 상세 정보를 확인합니다.</p>
+                <div id="line-capa-cards" style="display:flex;flex-direction:column;gap:12px;">
+                    <p style="text-align:center;color:#94a3b8;padding:40px 0;">등록된 라인 CAPA 정보가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 6: 계획 대비 실적 현황                       -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-dashboard" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>계획 대비 실적 현황</h2>
+            <p>판매·생산 계획 대비 실적 달성률과 재고 예측 현황을 분석합니다.</p>
+        </div>
+
+        <div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:20px;">
+            <label>
+                기준월
+                <input type="month" id="dashboard-base-month" value="2025-04">
+            </label>
+            <label>
+                분석 모드
+                <select id="dashboard-accuracy-mode">
+                    <option value="cumulative">누적</option>
+                    <option value="rolling">Rolling</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- 재고 예측 -->
+        <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 5px 15px rgba(15,23,42,0.08);margin-bottom:24px;">
+            <h3 style="margin:0 0 16px;font-size:1.15rem;color:#0f172a;">향후 3개월 재고 예측</h3>
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <p id="inventory-forecast-empty" style="text-align:center;padding:40px 0;color:#94a3b8;">예측 데이터가 없습니다.</p>
+            </div>
+        </div>
+
+        <!-- 달성률 요약 -->
+        <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+            <h3 style="margin:0 0 16px;font-size:1.15rem;color:#0f172a;">달성률 요약</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                <div>
+                    <h4 style="margin:0 0 12px;font-size:0.95rem;color:#64748b;">판매 달성률</h4>
+                    <div style="height:240px;display:flex;align-items:center;justify-content:center;">
+                        <canvas id="inventory-accuracy-sales-chart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="margin:0 0 12px;font-size:0.95rem;color:#64748b;">생산 달성률</h4>
+                    <div style="height:240px;display:flex;align-items:center;justify-content:center;">
+                        <canvas id="inventory-accuracy-production-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p id="inventory-accuracy-summary-chart-empty" style="text-align:center;color:#94a3b8;font-size:0.9rem;">데이터를 등록하면 차트가 표시됩니다.</p>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 7: 재고 분석 대시보드                        -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-analytics" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>재고 분석 대시보드</h2>
+            <p>재고 리스크 자재를 식별하고 분석합니다.</p>
+        </div>
+
+        <div class="analytics-risk-panel">
+            <div class="panel-header">
+                <div>
+                    <h3>리스크 자재 현황</h3>
+                    <p>재고 부족·과재고 위험이 있는 자재 목록</p>
+                </div>
+                <div class="analytics-controls">
+                    <label>
+                        기준월
+                        <select id="analytics-month-filter">
+                            <option value="all">전체</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <p id="inventory-risk-empty" style="text-align:center;padding:48px 0;color:#94a3b8;">리스크 자재가 없습니다.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 8: 적정재고관리                              -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-optimal-inventory" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>적정재고관리</h2>
+            <p>카테고리별 적정재고 기준을 설정하고, 실제 재고와 비교·분석합니다.</p>
+        </div>
+
+        <div style="display:flex;gap:16px;align-items:flex-end;margin-bottom:20px;">
+            <label>
+                기준년도
+                <select id="optimal-year">
+                    <option value="2025" selected>2025</option>
+                    <option value="2026">2026</option>
+                </select>
+            </label>
+            <label>
+                집계 모드
+                <select id="optimal-aggregation-mode">
+                    <option value="all" selected>전체</option>
+                    <option value="category">카테고리별</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- 요약 테이블 -->
+        <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 5px 15px rgba(15,23,42,0.08);margin-bottom:24px;">
+            <h3 style="margin:0 0 16px;font-size:1.15rem;color:#0f172a;">적정재고 대비 현황</h3>
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <p id="optimal-empty" style="text-align:center;padding:48px 0;color:#94a3b8;">적정재고 기준이 등록되지 않았습니다.</p>
+            </div>
+        </div>
+
+        <!-- 차트 -->
+        <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 5px 15px rgba(15,23,42,0.08);margin-bottom:24px;">
+            <h3 style="margin:0 0 16px;font-size:1.15rem;color:#0f172a;">재고 추이 차트</h3>
+            <div class="optimal-chart-container" style="height:320px;display:flex;align-items:center;justify-content:center;">
+                <canvas id="optimal-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- 기준 등록 -->
+        <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+            <h3 id="optimal-baseline-header" style="margin:0 0 16px;font-size:1.15rem;color:#0f172a;">적정재고 기준 등록</h3>
+            <form id="optimal-baseline-form" class="form-grid" style="gap:16px;">
+                <label>
+                    기준년도
+                    <select id="optimal-baseline-year">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </label>
+                <label>
+                    카테고리
+                    <input type="text" id="optimal-baseline-category" placeholder="카테고리명">
+                </label>
+                <label>
+                    적정재고 수량
+                    <input type="number" id="optimal-baseline-quantity" placeholder="0" min="0">
+                </label>
+                <label>
+                    비고
+                    <input type="text" id="optimal-baseline-notes" placeholder="메모">
+                </label>
+                <div class="form-actions" style="grid-column:1/-1;">
+                    <button type="submit" class="primary" id="optimal-baseline-submit">등록</button>
+                    <button type="button" class="ghost" id="optimal-baseline-reset">초기화</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 9: 변경 이력 관리                            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-change-history" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>변경 이력 관리</h2>
+            <p>생산계획 및 데이터 업로드 변경 이력을 추적합니다.</p>
+        </div>
+
+        <div class="change-history-section">
+            <!-- 탭 -->
+            <div class="change-history-tabs">
+                <button class="history-tab active" data-history="production">생산계획 변경이력</button>
+                <button class="history-tab" data-history="upload">업로드 이력</button>
+            </div>
+
+            <!-- 생산계획 변경이력 패널 -->
+            <div data-history-panel="production">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px;">
+                    <label>
+                        변경유형
+                        <select id="history-filter-type">
+                            <option value="all">전체</option>
+                            <option value="created">신규</option>
+                            <option value="updated">수정</option>
+                        </select>
+                    </label>
+                    <label>
+                        계획월
+                        <select id="history-filter-month">
+                            <option value="all">전체</option>
+                        </select>
+                    </label>
+                    <label>
+                        자재 검색
+                        <input type="text" id="history-filter-item" placeholder="자재코드 또는 자재명">
+                    </label>
+                    <button class="ghost" id="history-export" disabled>엑셀 내보내기</button>
+                </div>
+                <div class="table-wrapper" style="overflow-x:auto;">
+                    <p id="change-history-empty" style="text-align:center;padding:48px 0;color:#94a3b8;">변경 이력이 없습니다.</p>
+                </div>
+            </div>
+
+            <!-- 업로드 이력 패널 -->
+            <div data-history-panel="upload" style="display:none;">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px;">
+                    <label>
+                        시작일
+                        <input type="date" id="upload-history-filter-from">
+                    </label>
+                    <label>
+                        종료일
+                        <input type="date" id="upload-history-filter-to">
+                    </label>
+                    <label>
+                        자재 검색
+                        <input type="text" id="upload-history-filter-item" placeholder="자재코드">
+                    </label>
+                    <button class="ghost" id="upload-history-filter-reset">초기화</button>
+                </div>
+                <div class="table-wrapper" style="overflow-x:auto;">
+                    <p id="change-upload-history-empty" style="text-align:center;padding:48px 0;color:#94a3b8;">업로드 이력이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 10: 인터페이스 관리                          -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-interface-mgmt" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>인터페이스 관리</h2>
+            <p>외부 시스템(SAP, ERP 등)과의 데이터 연동 인터페이스를 관리합니다.</p>
+        </div>
+
+        <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
+                <!-- IF Card 1 -->
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <h3 style="margin:0;font-size:1rem;color:#0f172a;">SAP 자재마스터 연동</h3>
+                        <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">활성</span>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:0.88rem;">SAP MM 모듈에서 자재마스터 정보를 주기적으로 동기화합니다.</p>
+                    <div style="display:flex;gap:8px;margin-top:auto;">
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">매일 06:00</span>
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">최종: 정상</span>
+                    </div>
+                </div>
+                <!-- IF Card 2 -->
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <h3 style="margin:0;font-size:1rem;color:#0f172a;">SAP 재고 동기화</h3>
+                        <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">활성</span>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:0.88rem;">SAP 재고 데이터를 실시간으로 연동합니다.</p>
+                    <div style="display:flex;gap:8px;margin-top:auto;">
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">매시 정각</span>
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">최종: 정상</span>
+                    </div>
+                </div>
+                <!-- IF Card 3 -->
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <h3 style="margin:0;font-size:1rem;color:#0f172a;">생산실적 연동</h3>
+                        <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(245,158,11,0.12);color:#f59e0b;">준비중</span>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:0.88rem;">MES 시스템에서 생산실적을 자동으로 수집합니다.</p>
+                    <div style="display:flex;gap:8px;margin-top:auto;">
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">미설정</span>
+                    </div>
+                </div>
+                <!-- IF Card 4 -->
+                <div style="border:1px solid #e2e8f0;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <h3 style="margin:0;font-size:1rem;color:#0f172a;">판매실적 연동</h3>
+                        <span style="padding:4px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(245,158,11,0.12);color:#f59e0b;">준비중</span>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:0.88rem;">영업 시스템의 판매실적 데이터를 자동으로 연동합니다.</p>
+                    <div style="display:flex;gap:8px;margin-top:auto;">
+                        <span style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:0.82rem;color:#64748b;">미설정</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- VIEW 11: 사용자 관리                              -->
+    <!-- ══════════════════════════════════════════════ -->
+    <section class="view-section" id="view-user-mgmt" aria-hidden="true" style="display:none;">
+        <div class="section-header">
+            <h2>사용자 관리</h2>
+            <p>시스템 사용자 계정 및 권한을 관리합니다.</p>
+        </div>
+
+        <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;font-size:1.1rem;color:#0f172a;">사용자 목록</h3>
+                <button class="primary" disabled>사용자 추가</button>
+            </div>
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;min-width:700px;">
+                    <thead>
+                        <tr>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">사용자 ID</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">이름</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">부서</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">권한</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">상태</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:left;">최종 로그인</th>
+                            <th style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;background:#f8fafc;text-align:center;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">admin</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">관리자</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">PS사업부</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(37,99,235,0.12);color:#2563eb;">ADMIN</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">활성</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;color:#64748b;">2025-04-23 09:30</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;text-align:center;">
+                                <button class="ghost small" disabled>편집</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">planner01</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">김계획</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">생산계획팀</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">PLANNER</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">활성</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;color:#64748b;">2025-04-22 17:45</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;text-align:center;">
+                                <button class="ghost small" disabled>편집</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">viewer01</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">박조회</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">영업팀</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(148,163,184,0.18);color:#64748b;">VIEWER</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;">
+                                <span style="padding:3px 10px;border-radius:999px;font-size:0.78rem;font-weight:600;background:rgba(5,150,105,0.12);color:#059669;">활성</span>
+                            </td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;color:#64748b;">2025-04-21 14:10</td>
+                            <td style="padding:12px 14px;border:1px solid rgba(226,232,240,0.8);font-size:0.88rem;text-align:center;">
+                                <button class="ghost small" disabled>편집</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script src="js/app.js"></script>
+</body>
+</html>
