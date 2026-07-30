@@ -497,6 +497,9 @@ IF_MASTER_FILE = os.path.join(DATA_DIR, 'interface_master.json')
 IF_SCHEDULE_FILE = os.path.join(DATA_DIR, 'interface_schedule.json')
 IF_HISTORY_FILE = os.path.join(DATA_DIR, 'interface_history.json')
 
+# ─── 슬리터 외주 진행 내역 데이터 파일 ───
+SLITTER_OUTSOURCE_FILE = os.path.join(DATA_DIR, 'slitter_outsource.json')
+
 
 def load_json_file(filepath, default=None):
     """JSON 파일 로드 — 없거나 파싱 실패 시 default 반환"""
@@ -980,6 +983,74 @@ def api_if_history_list():
         histories = [h for h in histories if h.get('if_id') == filter_if_id]
 
     return jsonify({'success': True, 'data': histories, 'count': len(histories)})
+
+
+# ═══════════════════════════════════════════════
+# 슬리터 외주 진행 내역 API
+# ═══════════════════════════════════════════════
+# DB 스키마 (JSON 기반):
+# ┌─────────────────────────────────────────────────────────────┐
+# │ 테이블명: slitter_outsource                                 │
+# ├─────────────┬──────────┬──────────────────────────────────┤
+# │ 필드명       │ 타입      │ 설명                             │
+# ├─────────────┼──────────┼──────────────────────────────────┤
+# │ year_month   │ string   │ 대상 월 (YYYY-MM), PK 역할       │
+# │ days         │ object   │ 일자별 데이터 { "1": {...}, ... } │
+# │  └ cheongju  │ number   │ 청주대기 (수기입력)               │
+# │  └ ipgo      │ number   │ 입고 (수기입력)                   │
+# │  └ slitting  │ number   │ 슬리팅실적 (수기입력)             │
+# │  └ daegi     │ number   │ 대기재고 (자동계산)               │
+# │  └ slit_ipgo │ number   │ 슬리팅 입고 (수기입력)            │
+# │  └ chulgo    │ number   │ 출고 (수기입력)                   │
+# │  └ bogwan    │ number   │ 보관재고 (자동계산)               │
+# │  └ total     │ number   │ 계 (자동계산 = 대기재고+보관재고) │
+# │ updated_at   │ string   │ 최종 수정일시 (ISO)              │
+# │ updated_by   │ string   │ 최종 수정자                      │
+# └─────────────┴──────────┴──────────────────────────────────┘
+
+
+@app.route('/api/slitter-outsource/load', methods=['GET'])
+def api_slitter_outsource_load():
+    """슬리터 외주 진행 내역 로드 — year_month 파라미터 필수"""
+    ym = request.args.get('year_month', '').strip()
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 파라미터 필요'}), 400
+
+    all_data = load_json_file(SLITTER_OUTSOURCE_FILE, {})
+    record = all_data.get(ym, None)
+    if record is None:
+        return jsonify({'success': True, 'data': None, 'message': '데이터 없음'})
+    return jsonify({'success': True, 'data': record})
+
+
+@app.route('/api/slitter-outsource/save', methods=['POST'])
+def api_slitter_outsource_save():
+    """슬리터 외주 진행 내역 저장 — 월 단위 전체 저장"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    ym = body.get('year_month', '').strip()
+    days = body.get('days', {})
+    user_id = body.get('user_id', 'system')
+
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 필요'}), 400
+
+    all_data = load_json_file(SLITTER_OUTSOURCE_FILE, {})
+    all_data[ym] = {
+        'year_month': ym,
+        'days': days,
+        'updated_at': datetime.now().isoformat(),
+        'updated_by': user_id,
+    }
+    save_json_file(SLITTER_OUTSOURCE_FILE, all_data)
+
+    return jsonify({
+        'success': True,
+        'message': f'{ym} 슬리터 외주 진행 내역 저장 완료',
+        'data': all_data[ym],
+    })
 
 
 if __name__ == '__main__':

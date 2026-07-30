@@ -7683,3 +7683,157 @@ td.number {
 .subulbu-date-th.subulbu-sun {
     color: #dc2626;
 }
+
+/* ══════════════════════════════════════════════
+   슬리터 외주 진행 내역 요약 테이블
+   ══════════════════════════════════════════════ */
+.outsource-card {
+    margin-top: 24px;
+}
+.outsource-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.outsource-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+.outsource-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 외주 테이블 기본 */
+.outsource-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+.outsource-table th,
+.outsource-table td {
+    border: 1px solid #b0b8c1;
+    padding: 5px 8px;
+    text-align: center;
+    font-size: 0.84rem;
+    white-space: nowrap;
+}
+
+/* 헤더 행 (7월 + 날짜) */
+.outsource-table thead th {
+    background: #e2e6eb;
+    font-weight: 700;
+    color: #1e293b;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.outsource-th-month {
+    min-width: 140px;
+    background: #e2e6eb;
+}
+
+/* 그룹 라벨 (원규격/재단완료) — rowspan 셀 */
+.outsource-group-label {
+    background: #f8f9fa;
+    font-weight: 700;
+    color: #1e293b;
+    min-width: 72px;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 1.35;
+    font-size: 0.82rem;
+}
+
+/* 서브 라벨 (청주대기, 입고 등) */
+.outsource-sub-label {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #334155;
+    min-width: 72px;
+    text-align: center;
+    font-size: 0.83rem;
+}
+
+/* 대기재고 행 — 연한 파란색 배경 (노란 하이라이트) */
+.outsource-row-daegi td {
+    background: #dbeafe;
+}
+.outsource-row-daegi .outsource-group-label,
+.outsource-row-daegi .outsource-sub-label {
+    background: #bfdbfe;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+/* 보관재고 행 — 연한 파란색 배경 */
+.outsource-row-bogwan td {
+    background: #dbeafe;
+}
+.outsource-row-bogwan .outsource-group-label,
+.outsource-row-bogwan .outsource-sub-label {
+    background: #bfdbfe;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+/* 계 행 — 회색 배경 */
+.outsource-row-total td {
+    background: #e2e6eb;
+    font-weight: 700;
+    color: #1e293b;
+}
+.outsource-row-total .outsource-total-label {
+    background: #d1d5db;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+/* 일반 행 (흰색 배경) */
+.outsource-row-normal td {
+    background: #fff;
+}
+
+/* 수기 입력 필드 */
+.outsource-input {
+    width: 58px;
+    padding: 3px 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-align: right;
+    font-size: 0.83rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1e293b;
+    background: #fffde7;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.outsource-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    background: #fff;
+}
+.outsource-input.modified {
+    border-color: #f59e0b;
+    background: #fef3c7;
+}
+
+/* 자동 계산 셀 */
+.outsource-calc {
+    font-weight: 600;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 날짜 헤더 */
+.outsource-date-th {
+    min-width: 72px;
+    font-size: 0.82rem;
+}
+.outsource-date-th.outsource-sat { color: #2563eb; }
+.outsource-date-th.outsource-sun { color: #dc2626; }
