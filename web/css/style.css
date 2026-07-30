@@ -7826,7 +7826,7 @@ td.number {
 /* 수기 입력 필드 — 모든 상태에서 테두리/외곽선 완전 제거 */
 .outsource-input {
     width: 58px;
-    padding: 5px 6px;
+    padding: 0 2px;
     text-align: right;
     font-size: 0.83rem;
     font-family: 'Noto Sans KR', sans-serif;
@@ -7859,11 +7859,13 @@ td.number {
     background: transparent !important;
 }
 
-/* 자동 계산 셀 */
+/* 자동 계산 셀 — input 행과 높이 동일하게 맞춤 */
 .outsource-calc {
     font-weight: 600;
     color: #1e293b;
     font-variant-numeric: tabular-nums;
+    font-size: 0.83rem;
+    text-align: right;
 }
 
 /* 날짜 헤더 */
