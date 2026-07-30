@@ -7827,29 +7827,22 @@ td.number {
 .outsource-input {
     width: 58px;
     padding: 5px 6px;
-    border: 1px solid transparent;
-    border-radius: 6px;
+    border: none;
+    border-radius: 0;
     text-align: right;
     font-size: 0.83rem;
     font-family: 'Noto Sans KR', sans-serif;
     color: #1e293b;
-    background: #f8fafc;
+    background: transparent;
     outline: none;
     font-variant-numeric: tabular-nums;
-    transition: all 0.2s;
-}
-.outsource-input:hover {
-    border-color: #cbd5e1;
-    background: #fff;
 }
 .outsource-input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    background: #fff;
+    background: transparent;
+    outline: none;
 }
 .outsource-input.modified {
-    border-color: #f59e0b;
-    background: #fffbeb;
+    background: transparent;
 }
 
 /* 자동 계산 셀 */
