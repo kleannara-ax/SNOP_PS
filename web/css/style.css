@@ -326,34 +326,42 @@ main {
     font-size: 0.82rem;
     color: #94a3b8;
 }
+
+/* ── 슬리터 테이블 (모던 스타일) ── */
 .slitter-table {
     width: 100%;
-    border-collapse: collapse;
-    min-width: 700px;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 500px;
 }
 .slitter-table th,
 .slitter-table td {
-    padding: 10px 14px;
-    border: 1px solid #d1d5db;
-    font-size: 0.88rem;
+    border: none;
+    border-bottom: 1px solid #edf0f4;
+    padding: 11px 16px;
+    font-size: 0.85rem;
     text-align: center;
+    white-space: nowrap;
 }
-.slitter-table th {
-    background: #f1f5f9;
-    font-weight: 700;
-    color: #1e293b;
+.slitter-table thead th {
+    background: #f6f8fb;
+    font-weight: 600;
+    color: #475569;
     position: sticky;
     top: 0;
     z-index: 2;
-    white-space: nowrap;
+    border-bottom: 2px solid #e2e8f0;
+    letter-spacing: -0.01em;
+    font-size: 0.83rem;
 }
 /* 컬럼 너비 */
-.slitter-table .col-domestic   { min-width: 90px; }
-.slitter-table .col-represent  { min-width: 100px; }
-.slitter-table .col-paper-code { min-width: 100px; }
-.slitter-table .col-basis-weight { min-width: 80px; }
-.slitter-table .col-width      { min-width: 90px; }
-.slitter-table .col-weight     { min-width: 90px; }
+.slitter-table .col-domestic     { min-width: 80px; }
+.slitter-table .col-represent    { min-width: 90px; }
+.slitter-table .col-paper-code   { min-width: 90px; }
+.slitter-table .col-basis-weight { min-width: 70px; }
+.slitter-table .col-width        { min-width: 80px; }
+.slitter-table .col-weight       { min-width: 80px; }
+
 /* 데이터 행 */
 .slitter-row td {
     color: #1e293b;
@@ -361,38 +369,53 @@ main {
 }
 .slitter-row td:first-child {
     font-weight: 600;
+    color: #334155;
     text-align: left;
     padding-left: 18px;
 }
+.slitter-table tbody tr:hover td {
+    background: #f8fafd;
+}
+
 /* 소계 행 (내수 합계 / 수출 합계) */
 .slitter-subtotal-row td {
-    background: #fef9c3;
+    background: #eff6ff;
     font-weight: 600;
-    color: #92400e;
+    color: #1e293b;
 }
 .slitter-subtotal-row .subtotal-label {
     text-align: left;
     padding-left: 18px;
-    color: #b91c1c;
+    color: #1d4ed8;
     font-weight: 700;
 }
 .slitter-subtotal-row .subtotal-value {
     font-weight: 700;
+    color: #1d4ed8;
 }
+.slitter-table tbody tr.slitter-subtotal-row:hover td {
+    background: #e0ecff;
+}
+
 /* 총 합계 행 */
 .slitter-grandtotal-row td {
-    background: #e2e8f0;
+    background: #f6f8fb;
     font-weight: 700;
-    color: #0f172a;
+    color: #1e293b;
+    border-top: 2px solid #e2e8f0;
 }
 .slitter-grandtotal-row .grandtotal-label {
     text-align: left;
     padding-left: 18px;
-    color: #b91c1c;
+    color: #0f172a;
     font-weight: 800;
 }
 .slitter-grandtotal-row .grandtotal-value {
     font-weight: 800;
+    color: #0f172a;
+}
+.slitter-table tbody tr.slitter-grandtotal-row:hover td {
+    background: #eef1f5;
 }
 
 /* ═══ APP LAYOUT (Sidebar + Content) ═══ */
