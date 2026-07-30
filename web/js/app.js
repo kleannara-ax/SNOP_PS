@@ -440,6 +440,9 @@ function init() {
     /* 슬리터 수불부 월 선택기 초기화 */
     initSubulbuMonthSelector();
 
+    /* 슬리터 일자별 상세내역 중량 합계 계산 초기화 */
+    initSlitterCalc();
+
     /* 슬리터 외주 진행 내역 초기화 */
     initOutsource();
 
@@ -2723,6 +2726,60 @@ function initOutsource() {
     const saveBtn = document.getElementById('btn-outsource-save');
     if (saveBtn) {
         saveBtn.addEventListener('click', saveOutsourceData);
+    }
+}
+
+/**
+ * 슬리터 일자별 상세내역 — 중량 합계 자동 계산
+ * - 내수 합계: data-group="domestic" 행들의 중량(6번째 td) 합산
+ * - 수출 합계: data-group="export"   행들의 중량(6번째 td) 합산
+ * - 총 합계:  내수 합계 + 수출 합계
+ */
+function calcSlitterSubtotals() {
+    var tbody = document.getElementById('slitter-tbody');
+    if (!tbody) return;
+
+    var domesticSum = 0;
+    var exportSum = 0;
+
+    /* 모든 데이터 행 순회 */
+    var rows = tbody.querySelectorAll('tr.slitter-row');
+    rows.forEach(function (tr) {
+        var group = tr.dataset.group;
+        /* 중량 셀 = .slitter-weight-cell (마지막 데이터 컬럼) */
+        var weightCell = tr.querySelector('.slitter-weight-cell');
+        if (!weightCell) return;
+        var val = parseFloat(weightCell.textContent) || 0;
+
+        if (group === 'domestic') {
+            domesticSum += val;
+        } else if (group === 'export') {
+            exportSum += val;
+        }
+    });
+
+    /* 합계 셀 업데이트 */
+    var domesticEl = document.getElementById('domestic-weight-sum');
+    var exportEl = document.getElementById('export-weight-sum');
+    var grandEl = document.getElementById('grand-weight-sum');
+
+    if (domesticEl) domesticEl.textContent = domesticSum ? domesticSum.toLocaleString() : '';
+    if (exportEl) exportEl.textContent = exportSum ? exportSum.toLocaleString() : '';
+    if (grandEl) grandEl.textContent = (domesticSum + exportSum) ? (domesticSum + exportSum).toLocaleString() : '';
+}
+
+/**
+ * 슬리터 테이블 tbody 변경 감시 — 데이터 행 추가/변경 시 자동 재계산
+ */
+function initSlitterCalc() {
+    calcSlitterSubtotals();
+
+    var tbody = document.getElementById('slitter-tbody');
+    if (tbody && typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function () {
+            calcSlitterSubtotals();
+        });
+        observer.observe(tbody, { childList: true, subtree: true, characterData: true });
     }
 }
 

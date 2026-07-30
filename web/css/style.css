@@ -367,6 +367,10 @@ main {
     color: #1e293b;
     background: #fff;
 }
+.slitter-row .slitter-weight-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
 .slitter-row td:first-child {
     font-weight: 600;
     color: #334155;
@@ -392,6 +396,8 @@ main {
 .slitter-subtotal-row .subtotal-value {
     font-weight: 700;
     color: #1d4ed8;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 .slitter-table tbody tr.slitter-subtotal-row:hover td {
     background: #e0ecff;
@@ -413,6 +419,8 @@ main {
 .slitter-grandtotal-row .grandtotal-value {
     font-weight: 800;
     color: #0f172a;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 .slitter-table tbody tr.slitter-grandtotal-row:hover td {
     background: #eef1f5;
