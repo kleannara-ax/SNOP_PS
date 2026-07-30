@@ -7835,11 +7835,21 @@ td.number {
     color: #1e293b;
     background: transparent;
     outline: none;
+    box-shadow: none;
     font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
 }
-.outsource-input:focus {
+.outsource-input::-webkit-outer-spin-button,
+.outsource-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.outsource-input:focus,
+.outsource-input:focus-visible {
     background: transparent;
     outline: none;
+    border: none;
+    box-shadow: none;
 }
 .outsource-input.modified {
     background: transparent;
