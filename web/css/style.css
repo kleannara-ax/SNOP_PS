@@ -7823,36 +7823,40 @@ td.number {
 .outsource-table tbody tr.outsource-row-bogwan:hover td { background: #e8f1fe; }
 .outsource-table tbody tr.outsource-row-total:hover td { background: #eef1f5; }
 
-/* 수기 입력 필드 */
+/* 수기 입력 필드 — 모든 상태에서 테두리/외곽선 완전 제거 */
 .outsource-input {
     width: 58px;
     padding: 5px 6px;
-    border: none;
-    border-radius: 0;
     text-align: right;
     font-size: 0.83rem;
     font-family: 'Noto Sans KR', sans-serif;
     color: #1e293b;
-    background: transparent;
-    outline: none;
-    box-shadow: none;
     font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
     -moz-appearance: textfield;
+    appearance: none;
+    border: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 .outsource-input::-webkit-outer-spin-button,
 .outsource-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+    display: none;
 }
 .outsource-input:focus,
-.outsource-input:focus-visible {
-    background: transparent;
-    outline: none;
-    border: none;
-    box-shadow: none;
+.outsource-input:focus-visible,
+.outsource-input:active {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 .outsource-input.modified {
-    background: transparent;
+    background: transparent !important;
 }
 
 /* 자동 계산 셀 */
