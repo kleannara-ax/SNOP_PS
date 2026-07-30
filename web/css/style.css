@@ -7837,3 +7837,48 @@ td.number {
 }
 .outsource-date-th.outsource-sat { color: #2563eb; }
 .outsource-date-th.outsource-sun { color: #dc2626; }
+
+/* 월 선택기 */
+.outsource-month-input {
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1e293b;
+    background: #fff;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.outsource-month-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* 합계 컬럼 */
+.outsource-sum-th {
+    min-width: 72px;
+    background: #d1d5db !important;
+    font-weight: 800;
+    color: #0f172a;
+}
+.outsource-sum-cell {
+    font-weight: 700;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    background: #f1f5f9;
+}
+.outsource-row-daegi .outsource-sum-cell {
+    background: #bfdbfe;
+    color: #1e40af;
+}
+.outsource-row-bogwan .outsource-sum-cell {
+    background: #bfdbfe;
+    color: #1e40af;
+}
+.outsource-row-total .outsource-sum-cell {
+    background: #d1d5db;
+    color: #0f172a;
+    font-weight: 800;
+}
