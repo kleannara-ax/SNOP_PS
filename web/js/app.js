@@ -440,6 +440,9 @@ function init() {
     /* 슬리터 수불부 월 선택기 초기화 */
     initSubulbuMonthSelector();
 
+    /* 슬리터 외주 진행 내역 초기화 */
+    initOutsource();
+
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
 
@@ -2358,6 +2361,305 @@ function initSubulbuMonthSelector() {
         const m = parseInt(parts[1], 10);
         renderSubulbuTable(y, m);
     });
+}
+
+/* ══════════════════════════════════════════════
+   슬리터 외주 진행 내역 요약
+   ══════════════════════════════════════════════ */
+
+/** 외주 진행 내역 상태 */
+const outsourceState = {
+    yearMonth: '',          // 'YYYY-MM'
+    days: {},               // { "1": {cheongju, ipgo, slitting, daegi, slit_ipgo, chulgo, bogwan, total}, ... }
+    hasChanges: false,
+};
+
+/**
+ * 외주 테이블 렌더링 — 시스템 월 기준
+ */
+function renderOutsourceTable() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    outsourceState.yearMonth = year + '-' + String(month).padStart(2, '0');
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const headerRow = document.getElementById('outsource-header-row');
+    const tbody = document.getElementById('outsource-tbody');
+    const monthLabel = document.getElementById('outsource-month-label');
+    if (!headerRow || !tbody) return;
+
+    /* 월 라벨 */
+    if (monthLabel) monthLabel.textContent = month + '월';
+
+    /* ── 헤더: 월 colspan=2 + 날짜 컬럼 ── */
+    headerRow.innerHTML = '';
+    const thMonth = document.createElement('th');
+    thMonth.className = 'outsource-th-month';
+    thMonth.colSpan = 2;
+    thMonth.id = 'outsource-month-label';
+    thMonth.textContent = month + '월';
+    headerRow.appendChild(thMonth);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month - 1, d);
+        const dayIdx = dateObj.getDay();
+        const dayName = DAY_NAMES_KR[dayIdx];
+        let cls = 'outsource-date-th';
+        if (dayIdx === 0) cls += ' outsource-sun';
+        else if (dayIdx === 6) cls += ' outsource-sat';
+
+        const th = document.createElement('th');
+        th.className = cls;
+        th.textContent = d + '일';
+        headerRow.appendChild(th);
+    }
+
+    /* ── 행 구조 정의 ── */
+    const rowDefs = [
+        { key: 'cheongju',  groupLabel: '원규격\n(에페 입고)', groupRowspan: 4, subLabel: '청주대기', editable: true,  rowClass: 'outsource-row-normal' },
+        { key: 'ipgo',      groupLabel: null,                                  subLabel: '입고',     editable: true,  rowClass: 'outsource-row-normal' },
+        { key: 'slitting',  groupLabel: null,                                  subLabel: '슬리팅실적', editable: true, rowClass: 'outsource-row-normal' },
+        { key: 'daegi',     groupLabel: null,                                  subLabel: '대기재고',   editable: false, rowClass: 'outsource-row-daegi' },
+        { key: 'slit_ipgo', groupLabel: '재단완료\n(원지)',    groupRowspan: 3, subLabel: '슬리팅 입고', editable: true, rowClass: 'outsource-row-normal' },
+        { key: 'chulgo',    groupLabel: null,                                  subLabel: '출고',       editable: true,  rowClass: 'outsource-row-normal' },
+        { key: 'bogwan',    groupLabel: null,                                  subLabel: '보관재고',   editable: false, rowClass: 'outsource-row-bogwan' },
+        { key: 'total',     groupLabel: null, isTotal: true,                   subLabel: '계',         editable: false, rowClass: 'outsource-row-total' },
+    ];
+
+    tbody.innerHTML = '';
+
+    rowDefs.forEach((def) => {
+        const tr = document.createElement('tr');
+        tr.className = def.rowClass;
+        tr.dataset.outsourceRow = def.key;
+
+        /* 그룹 라벨 (rowspan) */
+        if (def.groupLabel) {
+            const tdGroup = document.createElement('td');
+            tdGroup.className = 'outsource-group-label';
+            tdGroup.rowSpan = def.groupRowspan;
+            tdGroup.textContent = def.groupLabel;
+            tr.appendChild(tdGroup);
+        }
+
+        /* 서브 라벨 / 계 라벨 */
+        const tdSub = document.createElement('td');
+        if (def.isTotal) {
+            tdSub.className = 'outsource-total-label';
+            tdSub.colSpan = 2;
+            tdSub.textContent = def.subLabel;
+        } else {
+            tdSub.className = 'outsource-sub-label';
+            tdSub.textContent = def.subLabel;
+        }
+        tr.appendChild(tdSub);
+
+        /* 날짜 데이터 셀 */
+        for (let d = 1; d <= daysInMonth; d++) {
+            const td = document.createElement('td');
+            if (def.editable) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'outsource-input';
+                input.dataset.day = d;
+                input.dataset.field = def.key;
+                input.value = '';
+                input.addEventListener('input', onOutsourceInput);
+                td.appendChild(input);
+            } else {
+                td.className = 'outsource-calc';
+                td.dataset.day = d;
+                td.dataset.field = def.key;
+                td.textContent = '';
+            }
+            tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+    });
+
+    /* 서버에서 데이터 로드 */
+    loadOutsourceData();
+}
+
+/**
+ * 수기 입력 이벤트 핸들러 — 값 변경 시 자동 계산 + 미저장 표시
+ */
+function onOutsourceInput(e) {
+    const input = e.target;
+    const day = parseInt(input.dataset.day, 10);
+    const field = input.dataset.field;
+    const val = input.value.trim() === '' ? null : parseFloat(input.value);
+
+    /* 상태 업데이트 */
+    if (!outsourceState.days[day]) {
+        outsourceState.days[day] = {};
+    }
+    outsourceState.days[day][field] = val;
+
+    /* 변경 표시 */
+    input.classList.add('modified');
+    outsourceState.hasChanges = true;
+    const saveBtn = document.getElementById('btn-outsource-save');
+    if (saveBtn) saveBtn.disabled = false;
+
+    /* 자동 계산 실행 */
+    recalcOutsource();
+}
+
+/**
+ * 자동 계산 로직:
+ * - 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적  (1일은: 입고 - 슬리팅실적)
+ * - 보관재고 = 슬리팅 입고 - 출고
+ * - 계 = 대기재고 + 보관재고
+ */
+function recalcOutsource() {
+    const table = document.getElementById('outsource-table');
+    if (!table) return;
+
+    const headerRow = document.getElementById('outsource-header-row');
+    const daysInMonth = headerRow ? headerRow.children.length - 1 : 0; // -1 for month th
+
+    let prevDaegi = 0;  // 전날 대기재고
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dayData = outsourceState.days[d] || {};
+
+        const cheongju = dayData.cheongju != null ? dayData.cheongju : 0;
+        const ipgo     = dayData.ipgo != null ? dayData.ipgo : 0;
+        const slitting = dayData.slitting != null ? dayData.slitting : 0;
+        const slit_ipgo = dayData.slit_ipgo != null ? dayData.slit_ipgo : 0;
+        const chulgo   = dayData.chulgo != null ? dayData.chulgo : 0;
+
+        /* 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적 */
+        const daegi = prevDaegi + ipgo - slitting;
+
+        /* 보관재고 = 슬리팅 입고 - 출고 */
+        const bogwan = slit_ipgo - chulgo;
+
+        /* 계 = 대기재고 + 보관재고 */
+        const total = daegi + bogwan;
+
+        /* 상태 업데이트 */
+        if (!outsourceState.days[d]) outsourceState.days[d] = {};
+        outsourceState.days[d].daegi = daegi;
+        outsourceState.days[d].bogwan = bogwan;
+        outsourceState.days[d].total = total;
+
+        /* DOM 업데이트 — 자동 계산 셀 */
+        const daegiCell = table.querySelector('td.outsource-calc[data-day="' + d + '"][data-field="daegi"]');
+        const bogwanCell = table.querySelector('td.outsource-calc[data-day="' + d + '"][data-field="bogwan"]');
+        const totalCell = table.querySelector('td.outsource-calc[data-day="' + d + '"][data-field="total"]');
+
+        if (daegiCell) daegiCell.textContent = daegi || '';
+        if (bogwanCell) bogwanCell.textContent = bogwan || '';
+        if (totalCell) totalCell.textContent = total || '';
+
+        prevDaegi = daegi;
+    }
+}
+
+/**
+ * 서버에서 외주 데이터 로드
+ */
+function loadOutsourceData() {
+    const ym = outsourceState.yearMonth;
+    if (!ym) return;
+
+    fetch('/api/slitter-outsource/load?year_month=' + encodeURIComponent(ym))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (!result.success || !result.data) return;
+
+            const savedDays = result.data.days || {};
+            outsourceState.days = {};
+
+            /* 저장된 값 → 입력 필드에 복원 */
+            Object.keys(savedDays).forEach(function (dayStr) {
+                const d = parseInt(dayStr, 10);
+                const dayData = savedDays[dayStr];
+                outsourceState.days[d] = dayData;
+
+                /* 수기 입력 필드 복원 */
+                ['cheongju', 'ipgo', 'slitting', 'slit_ipgo', 'chulgo'].forEach(function (field) {
+                    const input = document.querySelector('.outsource-input[data-day="' + d + '"][data-field="' + field + '"]');
+                    if (input && dayData[field] != null) {
+                        input.value = dayData[field];
+                    }
+                });
+            });
+
+            /* 자동 계산 실행 */
+            recalcOutsource();
+        })
+        .catch(function (err) {
+            console.error('[외주 로드 오류]', err);
+        });
+}
+
+/**
+ * 서버에 외주 데이터 저장
+ */
+function saveOutsourceData() {
+    const ym = outsourceState.yearMonth;
+    if (!ym) return;
+
+    /* 입력 필드에서 최신 값 수집 */
+    document.querySelectorAll('.outsource-input').forEach(function (input) {
+        const d = parseInt(input.dataset.day, 10);
+        const field = input.dataset.field;
+        const val = input.value.trim() === '' ? null : parseFloat(input.value);
+        if (!outsourceState.days[d]) outsourceState.days[d] = {};
+        outsourceState.days[d][field] = val;
+    });
+
+    /* 자동 계산 최종 실행 */
+    recalcOutsource();
+
+    fetch('/api/slitter-outsource/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: ym,
+            days: outsourceState.days,
+            user_id: 'admin',
+        }),
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success) {
+                outsourceState.hasChanges = false;
+                const saveBtn = document.getElementById('btn-outsource-save');
+                if (saveBtn) saveBtn.disabled = true;
+
+                /* modified 클래스 제거 */
+                document.querySelectorAll('.outsource-input.modified').forEach(function (el) {
+                    el.classList.remove('modified');
+                });
+
+                alert('슬리터 외주 진행 내역이 저장되었습니다.');
+            } else {
+                alert('저장 실패: ' + (result.message || ''));
+            }
+        })
+        .catch(function (err) {
+            console.error('[외주 저장 오류]', err);
+            alert('저장 중 오류가 발생했습니다.');
+        });
+}
+
+/**
+ * 외주 진행 내역 초기화
+ */
+function initOutsource() {
+    renderOutsourceTable();
+
+    /* 저장 버튼 바인딩 */
+    const saveBtn = document.getElementById('btn-outsource-save');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveOutsourceData);
+    }
 }
 
 /* ── 앱 시작 ── */

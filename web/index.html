@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260728f">
+    <link rel="stylesheet" href="css/style.css?v=20260730a">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -893,6 +893,31 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── 슬리터 외주 진행 내역 요약 ── -->
+            <div class="slitter-card outsource-card">
+                <div class="outsource-card-header">
+                    <h3 class="outsource-title">슬리터 외주 진행 내역 요약</h3>
+                    <div class="outsource-controls">
+                        <button class="btn-outsource-save primary small" id="btn-outsource-save" disabled>저장</button>
+                    </div>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="outsource-table" id="outsource-table">
+                            <thead>
+                                <tr id="outsource-header-row">
+                                    <th class="outsource-th-month" colspan="2" id="outsource-month-label">7월</th>
+                                    <!-- 날짜 컬럼은 JS에서 동적 생성 -->
+                                </tr>
+                            </thead>
+                            <tbody id="outsource-tbody">
+                                <!-- JS에서 동적 생성 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ── 서브패널 3: 카타 ── -->
@@ -1428,6 +1453,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260728f"></script>
+<script src="js/app.js?v=20260730a"></script>
 </body>
 </html>
