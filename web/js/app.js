@@ -2264,7 +2264,7 @@ function renderSubulbuTable(year, month) {
     const thLabel = document.createElement('th');
     thLabel.className = 'subulbu-th-label';
     thLabel.colSpan = 2;
-    thLabel.textContent = '일자';
+    thLabel.textContent = month + '월';
     headerRow.appendChild(thLabel);
 
     for (let d = 1; d <= daysInMonth; d++) {
