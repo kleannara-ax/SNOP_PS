@@ -2375,36 +2375,36 @@ const outsourceState = {
 };
 
 /**
- * 외주 테이블 렌더링 — 시스템 월 기준
+ * 외주 테이블 렌더링 — 지정 월 기준 (미지정 시 시스템 월)
+ * @param {number} [year]
+ * @param {number} [month] 1-12
  */
-function renderOutsourceTable() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
+function renderOutsourceTable(year, month) {
+    if (!year || !month) {
+        const now = new Date();
+        year = now.getFullYear();
+        month = now.getMonth() + 1;
+    }
     outsourceState.yearMonth = year + '-' + String(month).padStart(2, '0');
+    outsourceState.days = {};
+    outsourceState.hasChanges = false;
 
     const daysInMonth = new Date(year, month, 0).getDate();
     const headerRow = document.getElementById('outsource-header-row');
     const tbody = document.getElementById('outsource-tbody');
-    const monthLabel = document.getElementById('outsource-month-label');
     if (!headerRow || !tbody) return;
 
-    /* 월 라벨 */
-    if (monthLabel) monthLabel.textContent = month + '월';
-
-    /* ── 헤더: 월 colspan=2 + 날짜 컬럼 ── */
+    /* ── 헤더: 월 colspan=2 + 날짜 컬럼 + 합계 ── */
     headerRow.innerHTML = '';
     const thMonth = document.createElement('th');
     thMonth.className = 'outsource-th-month';
     thMonth.colSpan = 2;
-    thMonth.id = 'outsource-month-label';
     thMonth.textContent = month + '월';
     headerRow.appendChild(thMonth);
 
     for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, month - 1, d);
         const dayIdx = dateObj.getDay();
-        const dayName = DAY_NAMES_KR[dayIdx];
         let cls = 'outsource-date-th';
         if (dayIdx === 0) cls += ' outsource-sun';
         else if (dayIdx === 6) cls += ' outsource-sat';
@@ -2415,11 +2415,17 @@ function renderOutsourceTable() {
         headerRow.appendChild(th);
     }
 
+    /* 합계 헤더 */
+    const thSum = document.createElement('th');
+    thSum.className = 'outsource-sum-th';
+    thSum.textContent = '합계';
+    headerRow.appendChild(thSum);
+
     /* ── 행 구조 정의 ── */
     const rowDefs = [
-        { key: 'cheongju',  groupLabel: '원규격\n(에페 입고)', groupRowspan: 4, subLabel: '청주대기', editable: true,  rowClass: 'outsource-row-normal' },
-        { key: 'ipgo',      groupLabel: null,                                  subLabel: '입고',     editable: true,  rowClass: 'outsource-row-normal' },
-        { key: 'slitting',  groupLabel: null,                                  subLabel: '슬리팅실적', editable: true, rowClass: 'outsource-row-normal' },
+        { key: 'cheongju',  groupLabel: '원규격\n(에페 입고)', groupRowspan: 4, subLabel: '청주대기',   editable: true,  rowClass: 'outsource-row-normal' },
+        { key: 'ipgo',      groupLabel: null,                                  subLabel: '입고',       editable: true,  rowClass: 'outsource-row-normal' },
+        { key: 'slitting',  groupLabel: null,                                  subLabel: '슬리팅실적', editable: true,  rowClass: 'outsource-row-normal' },
         { key: 'daegi',     groupLabel: null,                                  subLabel: '대기재고',   editable: false, rowClass: 'outsource-row-daegi' },
         { key: 'slit_ipgo', groupLabel: '재단완료\n(원지)',    groupRowspan: 3, subLabel: '슬리팅 입고', editable: true, rowClass: 'outsource-row-normal' },
         { key: 'chulgo',    groupLabel: null,                                  subLabel: '출고',       editable: true,  rowClass: 'outsource-row-normal' },
@@ -2476,8 +2482,20 @@ function renderOutsourceTable() {
             tr.appendChild(td);
         }
 
+        /* 합계 셀 */
+        const tdSum = document.createElement('td');
+        tdSum.className = 'outsource-sum-cell';
+        tdSum.dataset.field = def.key;
+        tdSum.dataset.sum = 'row';
+        tdSum.textContent = '';
+        tr.appendChild(tdSum);
+
         tbody.appendChild(tr);
     });
+
+    /* 저장 버튼 초기화 */
+    const saveBtn = document.getElementById('btn-outsource-save');
+    if (saveBtn) saveBtn.disabled = true;
 
     /* 서버에서 데이터 로드 */
     loadOutsourceData();
@@ -2513,24 +2531,29 @@ function onOutsourceInput(e) {
  * - 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적  (1일은: 입고 - 슬리팅실적)
  * - 보관재고 = 슬리팅 입고 - 출고
  * - 계 = 대기재고 + 보관재고
+ * + 각 행의 합계 (맨 오른쪽 컬럼)
  */
 function recalcOutsource() {
     const table = document.getElementById('outsource-table');
     if (!table) return;
 
     const headerRow = document.getElementById('outsource-header-row');
-    const daysInMonth = headerRow ? headerRow.children.length - 1 : 0; // -1 for month th
+    // 헤더 th 수 = 1(월) + 날짜들 + 1(합계) → 날짜 수 = length - 2
+    const daysInMonth = headerRow ? headerRow.children.length - 2 : 0;
+
+    /* 행별 합계 누적용 */
+    const rowSums = { cheongju: 0, ipgo: 0, slitting: 0, daegi: 0, slit_ipgo: 0, chulgo: 0, bogwan: 0, total: 0 };
 
     let prevDaegi = 0;  // 전날 대기재고
 
     for (let d = 1; d <= daysInMonth; d++) {
         const dayData = outsourceState.days[d] || {};
 
-        const cheongju = dayData.cheongju != null ? dayData.cheongju : 0;
-        const ipgo     = dayData.ipgo != null ? dayData.ipgo : 0;
-        const slitting = dayData.slitting != null ? dayData.slitting : 0;
+        const cheongju  = dayData.cheongju != null ? dayData.cheongju : 0;
+        const ipgo      = dayData.ipgo != null ? dayData.ipgo : 0;
+        const slitting  = dayData.slitting != null ? dayData.slitting : 0;
         const slit_ipgo = dayData.slit_ipgo != null ? dayData.slit_ipgo : 0;
-        const chulgo   = dayData.chulgo != null ? dayData.chulgo : 0;
+        const chulgo    = dayData.chulgo != null ? dayData.chulgo : 0;
 
         /* 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적 */
         const daegi = prevDaegi + ipgo - slitting;
@@ -2556,8 +2579,26 @@ function recalcOutsource() {
         if (bogwanCell) bogwanCell.textContent = bogwan || '';
         if (totalCell) totalCell.textContent = total || '';
 
+        /* 행별 합계 누적 */
+        rowSums.cheongju  += cheongju;
+        rowSums.ipgo      += ipgo;
+        rowSums.slitting  += slitting;
+        rowSums.daegi     += daegi;
+        rowSums.slit_ipgo += slit_ipgo;
+        rowSums.chulgo    += chulgo;
+        rowSums.bogwan    += bogwan;
+        rowSums.total     += total;
+
         prevDaegi = daegi;
     }
+
+    /* 행별 합계 셀 업데이트 */
+    Object.keys(rowSums).forEach(function (field) {
+        const sumCell = table.querySelector('td.outsource-sum-cell[data-field="' + field + '"]');
+        if (sumCell) {
+            sumCell.textContent = rowSums[field] || '';
+        }
+    });
 }
 
 /**
@@ -2653,6 +2694,29 @@ function saveOutsourceData() {
  * 외주 진행 내역 초기화
  */
 function initOutsource() {
+    /* 월 선택기 초기값 설정 */
+    const monthInput = document.getElementById('outsource-month-selector');
+    if (monthInput) {
+        const now = new Date();
+        monthInput.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+        /* 월 변경 이벤트 */
+        monthInput.addEventListener('change', function () {
+            const val = this.value;
+            if (!val) return;
+            /* 미저장 경고 */
+            if (outsourceState.hasChanges) {
+                if (!confirm('저장하지 않은 변경사항이 있습니다. 월을 변경하시겠습니까?')) {
+                    this.value = outsourceState.yearMonth;
+                    return;
+                }
+            }
+            const parts = val.split('-');
+            renderOutsourceTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
+        });
+    }
+
+    /* 초기 렌더 */
     renderOutsourceTable();
 
     /* 저장 버튼 바인딩 */
