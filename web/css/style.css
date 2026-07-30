@@ -7587,76 +7587,94 @@ td.number {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-/* 수불부 테이블 기본 */
+/* ── 수불부 테이블 (모던 스타일) ── */
 .subulbu-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     min-width: 600px;
 }
 .subulbu-table th,
 .subulbu-table td {
-    border: 1px solid #c8cdd3;
-    padding: 7px 10px;
+    border: none;
+    border-bottom: 1px solid #edf0f4;
+    padding: 10px 14px;
     text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     white-space: nowrap;
 }
 
 /* 헤더 행 */
 .subulbu-table thead th {
-    background: #dce3eb;
-    font-weight: 700;
-    color: #1e293b;
+    background: #f6f8fb;
+    font-weight: 600;
+    color: #475569;
     position: sticky;
     top: 0;
     z-index: 2;
+    border-bottom: 2px solid #e2e8f0;
+    letter-spacing: -0.01em;
 }
 .subulbu-th-label {
     min-width: 70px;
-    background: #dce3eb;
 }
 
-/* 행 헤더 (좌측 고정 라벨) */
+/* 행 헤더 (좌측 라벨) */
 .subulbu-label {
-    background: #f1f5f9;
-    font-weight: 700;
-    color: #1e293b;
-    min-width: 70px;
-    text-align: center;
-}
-.subulbu-label-work {
-    background: #f1f5f9;
-    font-weight: 700;
-    color: #1e293b;
-    vertical-align: middle;
-}
-.subulbu-sublabel {
-    background: #f1f5f9;
+    background: transparent;
     font-weight: 600;
     color: #334155;
+    min-width: 70px;
+    text-align: center;
+    border-right: 1px solid #edf0f4;
+}
+.subulbu-label-work {
+    background: transparent;
+    font-weight: 600;
+    color: #334155;
+    vertical-align: middle;
+    border-right: 1px solid #edf0f4;
+}
+.subulbu-sublabel {
+    background: transparent;
+    font-weight: 500;
+    color: #64748b;
     min-width: 54px;
     text-align: center;
+    border-right: 1px solid #edf0f4;
 }
 
-/* 기초/입고/작업 행 — 흰색 배경 */
+/* 일반 행 — 흰색 배경 + hover */
 .subulbu-row-kicho td,
 .subulbu-row-ipgo td,
 .subulbu-row-work-naesu td,
 .subulbu-row-work-suchul td {
     background: #fff;
 }
+.subulbu-table tbody tr:hover td {
+    background: #f8fafd;
+}
 
-/* 계 행 — 연한 회색 배경 */
+/* 계 행 */
 .subulbu-row-gye td {
-    background: #f1f5f9;
+    background: #f6f8fb;
+    font-weight: 600;
+    color: #1e293b;
+    border-top: 2px solid #e2e8f0;
 }
 
-/* 기말 행 — 연한 파란색 배경 */
+/* 기말 행 — 소프트 블루 */
 .subulbu-row-gimal td {
-    background: #dbeafe;
+    background: #eff6ff;
+    color: #1e40af;
+    font-weight: 600;
+}
+.subulbu-row-gimal .subulbu-label {
+    color: #1d4ed8;
+    font-weight: 700;
 }
 
-/* 데이터 셀 (날짜 컬럼) */
+/* 데이터 셀 */
 .subulbu-table td.subulbu-data {
     min-width: 70px;
     color: #334155;
@@ -7671,18 +7689,15 @@ td.number {
 }
 .subulbu-date-day {
     display: block;
-    font-size: 0.78rem;
-    color: #64748b;
-    font-weight: 500;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 400;
+    margin-top: 1px;
 }
 
-/* 토요일/일요일 날짜 헤더 색상 */
-.subulbu-date-th.subulbu-sat {
-    color: #2563eb;
-}
-.subulbu-date-th.subulbu-sun {
-    color: #dc2626;
-}
+/* 토/일 색상 */
+.subulbu-date-th.subulbu-sat { color: #3b82f6; }
+.subulbu-date-th.subulbu-sun { color: #ef4444; }
 
 /* ══════════════════════════════════════════════
    슬리터 외주 진행 내역 요약 테이블
@@ -7708,119 +7723,133 @@ td.number {
     gap: 10px;
 }
 
-/* 외주 테이블 기본 */
+/* ── 외주 테이블 (모던 스타일) ── */
 .outsource-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     min-width: 600px;
 }
 .outsource-table th,
 .outsource-table td {
-    border: 1px solid #b0b8c1;
-    padding: 5px 8px;
+    border: none;
+    border-bottom: 1px solid #edf0f4;
+    padding: 9px 10px;
     text-align: center;
     font-size: 0.84rem;
     white-space: nowrap;
 }
 
-/* 헤더 행 (7월 + 날짜) */
+/* 헤더 */
 .outsource-table thead th {
-    background: #e2e6eb;
-    font-weight: 700;
-    color: #1e293b;
+    background: #f6f8fb;
+    font-weight: 600;
+    color: #475569;
     position: sticky;
     top: 0;
     z-index: 2;
+    border-bottom: 2px solid #e2e8f0;
+    letter-spacing: -0.01em;
 }
 .outsource-th-month {
     min-width: 140px;
-    background: #e2e6eb;
 }
 
-/* 그룹 라벨 (원규격/재단완료) — rowspan 셀 */
+/* 그룹 라벨 (원규격/재단완료) */
 .outsource-group-label {
-    background: #f8f9fa;
-    font-weight: 700;
-    color: #1e293b;
+    background: transparent;
+    font-weight: 600;
+    color: #334155;
     min-width: 72px;
     vertical-align: middle;
     text-align: center;
     line-height: 1.35;
     font-size: 0.82rem;
+    border-right: 1px solid #edf0f4;
 }
 
-/* 서브 라벨 (청주대기, 입고 등) */
+/* 서브 라벨 */
 .outsource-sub-label {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #334155;
+    background: transparent;
+    font-weight: 500;
+    color: #64748b;
     min-width: 72px;
     text-align: center;
     font-size: 0.83rem;
+    border-right: 1px solid #edf0f4;
 }
 
-/* 대기재고 행 — 연한 파란색 배경 (노란 하이라이트) */
+/* 대기재고 행 — 소프트 블루 띠 */
 .outsource-row-daegi td {
-    background: #dbeafe;
+    background: #eff6ff;
 }
 .outsource-row-daegi .outsource-group-label,
 .outsource-row-daegi .outsource-sub-label {
-    background: #bfdbfe;
-    color: #1e40af;
+    color: #1d4ed8;
     font-weight: 700;
 }
 
-/* 보관재고 행 — 연한 파란색 배경 */
+/* 보관재고 행 — 소프트 블루 띠 */
 .outsource-row-bogwan td {
-    background: #dbeafe;
+    background: #eff6ff;
 }
 .outsource-row-bogwan .outsource-group-label,
 .outsource-row-bogwan .outsource-sub-label {
-    background: #bfdbfe;
-    color: #1e40af;
+    color: #1d4ed8;
     font-weight: 700;
 }
 
-/* 계 행 — 회색 배경 */
+/* 계 행 */
 .outsource-row-total td {
-    background: #e2e6eb;
+    background: #f6f8fb;
     font-weight: 700;
     color: #1e293b;
+    border-top: 2px solid #e2e8f0;
 }
 .outsource-row-total .outsource-total-label {
-    background: #d1d5db;
-    font-weight: 800;
-    color: #0f172a;
+    font-weight: 700;
+    color: #1e293b;
+    border-right: 1px solid #edf0f4;
 }
 
-/* 일반 행 (흰색 배경) */
+/* 일반 행 + hover */
 .outsource-row-normal td {
     background: #fff;
 }
+.outsource-table tbody tr:hover td {
+    background: #f8fafd;
+}
+.outsource-table tbody tr.outsource-row-daegi:hover td { background: #e8f1fe; }
+.outsource-table tbody tr.outsource-row-bogwan:hover td { background: #e8f1fe; }
+.outsource-table tbody tr.outsource-row-total:hover td { background: #eef1f5; }
 
 /* 수기 입력 필드 */
 .outsource-input {
     width: 58px;
-    padding: 3px 4px;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
+    padding: 5px 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     text-align: right;
     font-size: 0.83rem;
     font-family: 'Noto Sans KR', sans-serif;
     color: #1e293b;
-    background: #fffde7;
+    background: #f8fafc;
     outline: none;
     font-variant-numeric: tabular-nums;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: all 0.2s;
+}
+.outsource-input:hover {
+    border-color: #cbd5e1;
+    background: #fff;
 }
 .outsource-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     background: #fff;
 }
 .outsource-input.modified {
     border-color: #f59e0b;
-    background: #fef3c7;
+    background: #fffbeb;
 }
 
 /* 자동 계산 셀 */
@@ -7835,13 +7864,13 @@ td.number {
     min-width: 72px;
     font-size: 0.82rem;
 }
-.outsource-date-th.outsource-sat { color: #2563eb; }
-.outsource-date-th.outsource-sun { color: #dc2626; }
+.outsource-date-th.outsource-sat { color: #3b82f6; }
+.outsource-date-th.outsource-sun { color: #ef4444; }
 
 /* 월 선택기 */
 .outsource-month-input {
-    padding: 6px 12px;
-    border: 1px solid #cbd5e1;
+    padding: 7px 14px;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 0.88rem;
     font-family: 'Noto Sans KR', sans-serif;
@@ -7849,36 +7878,36 @@ td.number {
     background: #fff;
     cursor: pointer;
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
+}
+.outsource-month-input:hover {
+    border-color: #94a3b8;
 }
 .outsource-month-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 /* 합계 컬럼 */
 .outsource-sum-th {
     min-width: 72px;
-    background: #d1d5db !important;
-    font-weight: 800;
-    color: #0f172a;
+    background: #eef1f5 !important;
+    font-weight: 700;
+    color: #1e293b;
+    border-left: 2px solid #e2e8f0 !important;
 }
 .outsource-sum-cell {
     font-weight: 700;
-    color: #0f172a;
+    color: #1e293b;
     font-variant-numeric: tabular-nums;
-    background: #f1f5f9;
+    border-left: 2px solid #e2e8f0;
 }
 .outsource-row-daegi .outsource-sum-cell {
-    background: #bfdbfe;
-    color: #1e40af;
+    color: #1d4ed8;
 }
 .outsource-row-bogwan .outsource-sum-cell {
-    background: #bfdbfe;
-    color: #1e40af;
+    color: #1d4ed8;
 }
 .outsource-row-total .outsource-sum-cell {
-    background: #d1d5db;
-    color: #0f172a;
     font-weight: 800;
 }
