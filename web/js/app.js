@@ -2408,13 +2408,14 @@ function renderOutsourceTable(year, month) {
     for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, month - 1, d);
         const dayIdx = dateObj.getDay();
+        const dayName = DAY_NAMES_KR[dayIdx];
         let cls = 'outsource-date-th';
         if (dayIdx === 0) cls += ' outsource-sun';
         else if (dayIdx === 6) cls += ' outsource-sat';
 
         const th = document.createElement('th');
         th.className = cls;
-        th.textContent = d + '일';
+        th.innerHTML = d + '일<span class="outsource-date-day">(' + dayName + ')</span>';
         headerRow.appendChild(th);
     }
 
