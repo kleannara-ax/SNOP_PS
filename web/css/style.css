@@ -7816,7 +7816,7 @@ td.number {
     white-space: nowrap;
 }
 
-/* 헤더 */
+/* 헤더 — 수불부와 동일한 높이 */
 .outsource-table thead th {
     background: #f6f8fb;
     font-weight: 600;
@@ -7826,6 +7826,8 @@ td.number {
     z-index: 2;
     border-bottom: 2px solid #e2e8f0;
     letter-spacing: -0.01em;
+    padding: 10px 14px;
+    height: auto;
 }
 .outsource-th-month {
     min-width: 140px;
