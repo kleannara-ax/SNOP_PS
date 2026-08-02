@@ -317,9 +317,15 @@ main {
 }
 .slitter-card-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+}
+.slitter-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
 }
 .slitter-note {
     margin: 16px 0 0;
