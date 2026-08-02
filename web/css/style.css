@@ -356,7 +356,6 @@ main {
 }
 /* 컬럼 너비 */
 .slitter-table .col-domestic     { min-width: 80px; }
-.slitter-table .col-represent    { min-width: 90px; }
 .slitter-table .col-paper-code   { min-width: 90px; }
 .slitter-table .col-basis-weight { min-width: 70px; }
 .slitter-table .col-width        { min-width: 80px; }

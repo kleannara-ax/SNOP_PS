@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260730q">
+    <link rel="stylesheet" href="css/style.css?v=20260730r">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -795,7 +795,6 @@
                                 <thead>
                                     <tr>
                                         <th class="col-domestic">내수구분</th>
-                                        <th class="col-represent">대표지종</th>
                                         <th class="col-paper-code">지종코드</th>
                                         <th class="col-basis-weight">평량</th>
                                         <th class="col-width">가로길이</th>
@@ -809,11 +808,10 @@
                                         <td></td>
                                         <td></td>
                                         <td></td>
-                                        <td></td>
                                         <td class="slitter-weight-cell"></td>
                                     </tr>
                                     <tr class="slitter-subtotal-row" data-group="domestic-subtotal">
-                                        <td class="subtotal-label" colspan="5">내수 합계</td>
+                                        <td class="subtotal-label" colspan="4">내수 합계</td>
                                         <td class="subtotal-value" id="domestic-weight-sum"></td>
                                     </tr>
                                     <!-- ── 수출 그룹 ── -->
@@ -822,23 +820,22 @@
                                         <td></td>
                                         <td></td>
                                         <td></td>
-                                        <td></td>
                                         <td class="slitter-weight-cell"></td>
                                     </tr>
                                     <tr class="slitter-subtotal-row" data-group="export-subtotal">
-                                        <td class="subtotal-label" colspan="5">수출 합계</td>
+                                        <td class="subtotal-label" colspan="4">수출 합계</td>
                                         <td class="subtotal-value" id="export-weight-sum"></td>
                                     </tr>
                                     <!-- ── 총 합계 ── -->
                                     <tr class="slitter-grandtotal-row">
-                                        <td class="grandtotal-label" colspan="5">총 합계</td>
+                                        <td class="grandtotal-label" colspan="4">총 합계</td>
                                         <td class="grandtotal-value" id="grand-weight-sum"></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                    <p class="slitter-note">* 데이터는 외부 시스템 연동(Vlookup 기반)으로 적재됩니다. 대표지종 → 지종코드 → 평량 → 가로길이 순 정렬.</p>
+                    <p class="slitter-note">* 데이터는 외부 시스템 연동(Vlookup 기반)으로 적재됩니다. 지종코드 → 평량 → 가로길이 순 정렬.</p>
                 </div>
 
                 <!-- 오른쪽 카드: 추가 콘텐츠 영역 -->
@@ -1453,6 +1450,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260730q"></script>
+<script src="js/app.js?v=20260730r"></script>
 </body>
 </html>
