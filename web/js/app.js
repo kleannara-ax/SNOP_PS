@@ -2260,6 +2260,7 @@ const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
 const subulbuState = {
     yearMonth: '',              // 'YYYY-MM'
     prevMonthLastGimal: 0,      // 전월 마지막 일의 기말값 (ton)
+    workRows: [],               // 작업(I/F) 데이터 rows [{work_date, domestic, weight}, ...]
 };
 
 /**
@@ -2316,20 +2317,49 @@ function aggregateSlitterDailyTotal(yearMonth) {
 }
 
 /**
+ * 수불부 작업(I/F) 데이터에서 일자별 내수/수출 집계 (ton 단위)
+ * @param {string} yearMonth — 'YYYY-MM'
+ * @returns {{ [day: string]: { domestic: number, export: number } }}
+ */
+function aggregateSubulbuWork(yearMonth) {
+    var rows = subulbuState.workRows || [];
+    var dailyMap = {};
+
+    rows.forEach(function (r) {
+        var date = r.work_date || '';
+        if (!date) return;
+        if (date.substring(0, 7) !== yearMonth) return;
+
+        var day = String(parseInt(date.substring(8, 10), 10));
+        if (!dailyMap[day]) dailyMap[day] = { domestic: 0, export: 0 };
+
+        var w = Number(r.weight) || 0; // 이미 ton 단위
+        if (r.domestic === '내수') {
+            dailyMap[day].domestic += w;
+        } else {
+            dailyMap[day].export += w;
+        }
+    });
+
+    return dailyMap;
+}
+
+/**
  * 수불부 산술 계산
  * ─────────────────────────────────────────────
  * 기말 = 일자별 상세 내역의 "당일" 총합계 (ton)
  * 기초 = 전일 기말 (1일은 전월 마지막일 기말값)
- * 내수/수출(작업) = 별도 I/F 테이블 (미구현, 0)
+ * 내수/수출(작업) = 수불부 작업(I/F) 테이블에서 집계
  * 계 = 내수 + 수출
  * 입고 = 기말 + 계 - 기초
  * ─────────────────────────────────────────────
  * @param {number} daysInMonth — 해당 월 일수
  * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 당일 총합계 (ton)
+ * @param {{ [day: string]: { domestic: number, export: number } }} dailyWork — 작업(I/F) 일자별 집계
  * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
  */
-function calcSubulbu(daysInMonth, dailyTotal, prevMonthLastGimal) {
+function calcSubulbu(daysInMonth, dailyTotal, dailyWork, prevMonthLastGimal) {
     var kicho = [], ipgo = [], naesu = [], suchul = [], gye = [], gimal = [];
 
     for (var d = 1; d <= daysInMonth; d++) {
@@ -2342,9 +2372,10 @@ function calcSubulbu(daysInMonth, dailyTotal, prevMonthLastGimal) {
         var kichoVal = (d === 1) ? (prevMonthLastGimal || 0) : (gimal[d - 2] || 0);
         kichoVal = Math.round(kichoVal * 10) / 10;
 
-        /* 내수/수출(작업) = 별도 I/F 테이블에서 가져옴 (추후 연동) */
-        var naesuVal = 0;
-        var suchulVal = 0;
+        /* 내수/수출(작업) = 수불부 작업 I/F 테이블 */
+        var workData = dailyWork[dayKey] || { domestic: 0, export: 0 };
+        var naesuVal = Math.round(workData.domestic * 10) / 10;
+        var suchulVal = Math.round(workData.export * 10) / 10;
 
         /* 계 = 내수 + 수출 */
         var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
@@ -2402,8 +2433,11 @@ function renderSubulbuTable(year, month) {
     /* ── 일자별 상세내역 당일 총합계 집계 (기말 용) ── */
     var dailyTotal = aggregateSlitterDailyTotal(yearMonth);
 
+    /* ── 작업(I/F) 일자별 내수/수출 집계 ── */
+    var dailyWork = aggregateSubulbuWork(yearMonth);
+
     /* ── 산술 계산 (전월 기말값 포함) ── */
-    var calc = calcSubulbu(daysInMonth, dailyTotal, subulbuState.prevMonthLastGimal);
+    var calc = calcSubulbu(daysInMonth, dailyTotal, dailyWork, subulbuState.prevMonthLastGimal);
 
     /* ── 행 구조 정의 (기말 포함 전체 자동계산) ── */
     const rowDefs = [
@@ -2521,8 +2555,9 @@ function extractPrevMonthLastGimal(prevData) {
 }
 
 /**
- * 전월 기말값 로드 후 테이블 렌더
- * 전월 마지막 일 누적합 = 1일 기초값
+ * 수불부 데이터 로드 후 테이블 렌더
+ * 1) 전월 기말값 (1일 기초용)
+ * 2) 작업(I/F) 데이터 (내수/수출)
  */
 function loadSubulbuData() {
     var ym = subulbuState.yearMonth;
@@ -2530,14 +2565,26 @@ function loadSubulbuData() {
 
     var prevYm = getPrevYearMonth(ym);
 
-    /* 전월 슬리터 상세 데이터에서 전월 총합계를 구하기 위해
-       전월 수불부 저장값(전월 기말)을 로드한다 */
-    fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm))
-        .then(function (r) { return r.json(); })
-        .then(function (prevResult) {
+    /* 전월 기말 + 작업(I/F) 데이터 동시 로드 */
+    Promise.all([
+        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm)).then(function (r) { return r.json(); }),
+        fetch('/api/slitter-subulbu-work/load?year_month=' + encodeURIComponent(ym)).then(function (r) { return r.json(); })
+    ])
+        .then(function (results) {
+            var prevResult = results[0];
+            var workResult = results[1];
+
+            /* 전월 마지막 일 기말값 → 1일 기초 */
             subulbuState.prevMonthLastGimal = extractPrevMonthLastGimal(
                 (prevResult.success && prevResult.data) ? prevResult.data : null
             );
+
+            /* 작업(I/F) 데이터 */
+            if (workResult.success && workResult.data) {
+                subulbuState.workRows = workResult.data.rows || [];
+            } else {
+                subulbuState.workRows = [];
+            }
 
             /* 렌더링 */
             var parts = ym.split('-');
@@ -2546,6 +2593,7 @@ function loadSubulbuData() {
         .catch(function (err) {
             console.error('[수불부 로드 오류]', err);
             subulbuState.prevMonthLastGimal = 0;
+            subulbuState.workRows = [];
             var parts = ym.split('-');
             renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
         });
