@@ -401,7 +401,7 @@ main {
     background: #fff;
 }
 .slitter-row .slitter-weight-cell {
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
 }
@@ -471,7 +471,7 @@ main {
 .slitter-subtotal-export .subtotal-label   { color: #dc2626; }
 .slitter-subtotal-row .subtotal-value {
     font-weight: 700;
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums;
 }
 .slitter-subtotal-domestic .subtotal-value { color: #1d4ed8; }
@@ -496,7 +496,7 @@ main {
 .slitter-grandtotal-row .grandtotal-value {
     font-weight: 800;
     color: #0f172a;
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums;
 }
 

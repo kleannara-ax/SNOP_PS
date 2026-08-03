@@ -2850,8 +2850,9 @@ function renderSlitterDetailTable() {
             /* ④ 가로길이 — 항상 표시 */
             html += '<td>' + (item.width != null ? Number(item.width).toLocaleString() : '') + '</td>';
 
-            /* ⑤ 중량(합계) — 항상 표시 */
-            html += '<td class="slitter-weight-cell">' + (item.weight ? Number(Math.round(item.weight)).toLocaleString() : '0') + '</td>';
+            /* ⑤ 중량(합계, ton) — kg→÷1000 */
+            var tonVal = item.weight ? (item.weight / 1000) : 0;
+            html += '<td class="slitter-weight-cell">' + tonVal.toFixed(1) + '</td>';
 
             tr.innerHTML = html;
             tbody.appendChild(tr);
@@ -2864,7 +2865,7 @@ function renderSlitterDetailTable() {
             subTr.className = 'slitter-subtotal-row slitter-subtotal-' + groupClass;
             subTr.innerHTML =
                 '<td class="subtotal-label" colspan="4">' + groupLabel + ' 합계</td>' +
-                '<td class="subtotal-value">' + Number(Math.round(groupSum)).toLocaleString() + '</td>';
+                '<td class="subtotal-value">' + (groupSum / 1000).toFixed(1) + '</td>';
             tbody.appendChild(subTr);
         }
 
@@ -2896,7 +2897,7 @@ function renderSlitterDetailTable() {
         tfoot.innerHTML =
             '<tr class="slitter-grandtotal-row">' +
                 '<td class="grandtotal-label" colspan="4">총 합계</td>' +
-                '<td class="grandtotal-value">' + Number(Math.round(grandTotal)).toLocaleString() + '</td>' +
+                '<td class="grandtotal-value">' + (grandTotal / 1000).toFixed(1) + '</td>' +
             '</tr>';
     }
 }
