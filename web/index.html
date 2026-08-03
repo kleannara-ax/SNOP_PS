@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260803i">
+    <link rel="stylesheet" href="css/style.css?v=20260803j">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -793,6 +793,14 @@
                             <button class="primary small" id="btn-slitter-export" disabled>엑셀 다운로드</button>
                         </div>
                     </div>
+                    <!-- 분석 텍스트 영역 -->
+                    <div class="slitter-analysis" id="slitter-analysis">
+                        <span class="analysis-icon">📊</span>
+                        <span class="analysis-text">일 재단량</span>
+                        <input type="number" id="slitter-daily-cut" class="slitter-daily-cut-input" placeholder="톤" min="1" step="1" value="35">
+                        <span class="analysis-text">ton 기준,</span>
+                        <span class="analysis-result" id="slitter-analysis-result">—</span>
+                    </div>
                     <div class="table-scroll-container">
                         <div class="table-wrapper" style="overflow-x:auto;">
                             <table class="slitter-table" id="slitter-table">
@@ -1429,6 +1437,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260803i"></script>
+<script src="js/app.js?v=20260803j"></script>
 </body>
 </html>

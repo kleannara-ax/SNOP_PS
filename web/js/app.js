@@ -2909,6 +2909,37 @@ function renderSlitterDetailTable() {
                 '<td class="grandtotal-value">' + (grandTotal / 1000).toFixed(1) + '</td>' +
             '</tr>';
     }
+
+    /* ── 7) 분석 텍스트 갱신 ── */
+    slitterDetailState.domesticTon = domesticTotal / 1000;
+    slitterDetailState.exportTon = exportTotal / 1000;
+    updateSlitterAnalysis();
+}
+
+/**
+ * 슬리터 분석 텍스트 갱신
+ * 내수/수출 합계(ton) ÷ 일재단량(ton) = 소요일수
+ */
+function updateSlitterAnalysis() {
+    var resultEl = document.getElementById('slitter-analysis-result');
+    if (!resultEl) return;
+
+    var input = document.getElementById('slitter-daily-cut');
+    var dailyCut = input ? parseFloat(input.value) : 0;
+    var domTon = slitterDetailState.domesticTon || 0;
+    var expTon = slitterDetailState.exportTon || 0;
+
+    if (!dailyCut || dailyCut <= 0 || (domTon === 0 && expTon === 0)) {
+        resultEl.textContent = '—';
+        return;
+    }
+
+    var expDays = Math.ceil(expTon / dailyCut);
+    var domDays = Math.ceil(domTon / dailyCut);
+
+    resultEl.innerHTML =
+        '수출 <strong>' + expDays + '일</strong> 소요, ' +
+        '내수 <strong>' + domDays + '일</strong> 소요';
 }
 
 /**
@@ -2991,6 +3022,12 @@ function initSlitterDetail() {
             slitterDetailState.yearMonth = val;
             loadSlitterDetail();
         });
+    }
+
+    /* 일 재단량 입력 이벤트 */
+    var dailyCutInput = document.getElementById('slitter-daily-cut');
+    if (dailyCutInput) {
+        dailyCutInput.addEventListener('input', updateSlitterAnalysis);
     }
 
     /* 저장 버튼 바인딩 */

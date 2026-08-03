@@ -395,6 +395,61 @@ main {
     gap: 8px;
 }
 
+/* ── 분석 텍스트 영역 ── */
+.slitter-analysis {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    margin: 0 0 12px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #334155;
+    flex-wrap: wrap;
+}
+.slitter-analysis .analysis-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.slitter-analysis .analysis-text {
+    color: #475569;
+}
+.slitter-daily-cut-input {
+    width: 60px;
+    padding: 4px 8px;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
+    color: #1d4ed8;
+    text-align: center;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.slitter-daily-cut-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+.slitter-daily-cut-input::-webkit-inner-spin-button,
+.slitter-daily-cut-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.slitter-daily-cut-input { -moz-appearance: textfield; }
+.slitter-analysis .analysis-result {
+    color: #1e293b;
+    font-weight: 600;
+}
+.slitter-analysis .analysis-result strong {
+    color: #1d4ed8;
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
 /* 데이터 행 */
 .slitter-row td {
     color: #1e293b;
