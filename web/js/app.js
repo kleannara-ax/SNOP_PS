@@ -2740,102 +2740,119 @@ var slitterDetailState = {
 };
 
 /**
- * 슬리터 일자별 상세 내역 테이블 렌더링
- * rows 데이터를 내수/수출로 분류하여 tbody에 그린다
+ * 슬리터 일자별 상세 내역 — VLOOKUP 집계 테이블 렌더링
+ * 내수/수출 → 지종코드 → 평량 → 가로길이 기준 중량 SUM
  */
 function renderSlitterDetailTable() {
     var tbody = document.getElementById('slitter-tbody');
+    var tfoot = document.getElementById('slitter-tfoot');
     if (!tbody) return;
 
     var rows = slitterDetailState.rows || [];
-
-    /* 내수/수출 분류 */
-    var domesticRows = rows.filter(function (r) { return r.domestic === '내수'; });
-    var exportRows = rows.filter(function (r) { return r.domestic === '수출'; });
-
     tbody.innerHTML = '';
+    if (tfoot) tfoot.innerHTML = '';
 
-    /* 내수 행 */
-    domesticRows.forEach(function (row) {
-        var tr = document.createElement('tr');
-        tr.className = 'slitter-row';
-        tr.dataset.group = 'domestic';
-        tr.dataset.rowId = row.id || '';
-        tr.innerHTML =
-            '<td>' + (row.date || '') + '</td>' +
-            '<td>' + (row.domestic || '') + '</td>' +
-            '<td>' + (row.paper_code || '') + '</td>' +
-            '<td>' + (row.basis_weight != null ? row.basis_weight : '') + '</td>' +
-            '<td>' + (row.width != null ? row.width : '') + '</td>' +
-            '<td class="slitter-weight-cell">' + (row.weight != null ? Number(row.weight).toLocaleString() : '') + '</td>';
-        tbody.appendChild(tr);
-    });
-
-    /* 내수 행이 없으면 빈 행 표시 */
-    if (domesticRows.length === 0) {
-        var emptyDomestic = document.createElement('tr');
-        emptyDomestic.className = 'slitter-row';
-        emptyDomestic.dataset.group = 'domestic';
-        emptyDomestic.innerHTML = '<td colspan="6" class="slitter-empty-msg">내수 데이터 없음</td>';
-        tbody.appendChild(emptyDomestic);
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="slitter-empty-msg">데이터 없음</td></tr>';
+        return;
     }
 
-    /* 수출 행 */
-    exportRows.forEach(function (row) {
-        var tr = document.createElement('tr');
-        tr.className = 'slitter-row';
-        tr.dataset.group = 'export';
-        tr.dataset.rowId = row.id || '';
-        tr.innerHTML =
-            '<td>' + (row.date || '') + '</td>' +
-            '<td>' + (row.domestic || '') + '</td>' +
-            '<td>' + (row.paper_code || '') + '</td>' +
-            '<td>' + (row.basis_weight != null ? row.basis_weight : '') + '</td>' +
-            '<td>' + (row.width != null ? row.width : '') + '</td>' +
-            '<td class="slitter-weight-cell">' + (row.weight != null ? Number(row.weight).toLocaleString() : '') + '</td>';
-        tbody.appendChild(tr);
+    /* ── 1) VLOOKUP 그룹핑: (domestic, paper_code, basis_weight, width) → SUM(weight) ── */
+    var groupMap = {};
+    rows.forEach(function (r) {
+        var key = r.domestic + '|' + r.paper_code + '|' + r.basis_weight + '|' + r.width;
+        if (!groupMap[key]) {
+            groupMap[key] = {
+                domestic: r.domestic,
+                paper_code: r.paper_code,
+                basis_weight: r.basis_weight,
+                width: r.width,
+                weight: 0,
+            };
+        }
+        groupMap[key].weight += (Number(r.weight) || 0);
     });
 
-    /* 수출 행이 없으면 빈 행 표시 */
-    if (exportRows.length === 0) {
-        var emptyExport = document.createElement('tr');
-        emptyExport.className = 'slitter-row';
-        emptyExport.dataset.group = 'export';
-        emptyExport.innerHTML = '<td colspan="6" class="slitter-empty-msg">수출 데이터 없음</td>';
-        tbody.appendChild(emptyExport);
+    /* 그룹 배열로 변환 후 정렬: 내수→수출, 지종코드, 평량, 가로길이 */
+    var grouped = Object.values(groupMap);
+    grouped.sort(function (a, b) {
+        var dOrder = { '내수': 0, '수출': 1 };
+        var da = dOrder[a.domestic] != null ? dOrder[a.domestic] : 2;
+        var db = dOrder[b.domestic] != null ? dOrder[b.domestic] : 2;
+        if (da !== db) return da - db;
+        if (a.paper_code !== b.paper_code) return a.paper_code < b.paper_code ? -1 : 1;
+        if (a.basis_weight !== b.basis_weight) return a.basis_weight - b.basis_weight;
+        return a.width - b.width;
+    });
+
+    /* ── 2) 내수/수출 각 그룹 분리 ── */
+    var domesticItems = grouped.filter(function (g) { return g.domestic === '내수'; });
+    var exportItems = grouped.filter(function (g) { return g.domestic === '수출'; });
+
+    /* ── 3) 그룹별 렌더링 함수 ── */
+    function renderGroup(items, groupLabel, groupClass) {
+        var groupSum = 0;
+
+        items.forEach(function (item, idx) {
+            var tr = document.createElement('tr');
+            tr.className = 'slitter-row slitter-group-' + groupClass;
+
+            /* 첫 번째 행에만 내수구분 rowspan */
+            var domesticCell = '';
+            if (idx === 0) {
+                domesticCell = '<td class="slitter-domestic-cell slitter-domestic-' + groupClass + '" rowspan="' + items.length + '">' + groupLabel + '</td>';
+            }
+
+            tr.innerHTML = domesticCell +
+                '<td>' + (item.paper_code || '') + '</td>' +
+                '<td>' + (item.basis_weight != null ? Number(item.basis_weight).toLocaleString() : '') + '</td>' +
+                '<td>' + (item.width != null ? Number(item.width).toLocaleString() : '') + '</td>' +
+                '<td class="slitter-weight-cell">' + (item.weight ? Number(Math.round(item.weight)).toLocaleString() : '0') + '</td>';
+            tbody.appendChild(tr);
+            groupSum += item.weight;
+        });
+
+        /* 그룹 소계 행 */
+        if (items.length > 0) {
+            var subTr = document.createElement('tr');
+            subTr.className = 'slitter-subtotal-row slitter-subtotal-' + groupClass;
+            subTr.innerHTML =
+                '<td class="subtotal-label" colspan="4">' + groupLabel + ' 합계</td>' +
+                '<td class="subtotal-value">' + Number(Math.round(groupSum)).toLocaleString() + '</td>';
+            tbody.appendChild(subTr);
+        }
+
+        return groupSum;
     }
 
-    /* 합계 계산 */
-    calcSlitterSubtotals();
-}
+    /* ── 4) 내수 렌더링 ── */
+    var domesticTotal = 0;
+    if (domesticItems.length > 0) {
+        domesticTotal = renderGroup(domesticItems, '내수', 'domestic');
+    } else {
+        tbody.innerHTML += '<tr class="slitter-row"><td colspan="5" class="slitter-empty-msg">내수 데이터 없음</td></tr>';
+    }
 
-/**
- * 중량 합계 자동 계산
- */
-function calcSlitterSubtotals() {
-    var tbody = document.getElementById('slitter-tbody');
-    if (!tbody) return;
+    /* ── 5) 수출 렌더링 ── */
+    var exportTotal = 0;
+    if (exportItems.length > 0) {
+        exportTotal = renderGroup(exportItems, '수출', 'export');
+    } else {
+        var emptyTr = document.createElement('tr');
+        emptyTr.className = 'slitter-row';
+        emptyTr.innerHTML = '<td colspan="5" class="slitter-empty-msg">수출 데이터 없음</td>';
+        tbody.appendChild(emptyTr);
+    }
 
-    var domesticSum = 0;
-    var exportSum = 0;
-
-    var trs = tbody.querySelectorAll('tr.slitter-row');
-    trs.forEach(function (tr) {
-        var group = tr.dataset.group;
-        var weightCell = tr.querySelector('.slitter-weight-cell');
-        if (!weightCell) return;
-        var val = parseFloat(weightCell.textContent.replace(/,/g, '')) || 0;
-        if (group === 'domestic') domesticSum += val;
-        else if (group === 'export') exportSum += val;
-    });
-
-    var domesticEl = document.getElementById('domestic-weight-sum');
-    var exportEl = document.getElementById('export-weight-sum');
-    var grandEl = document.getElementById('grand-weight-sum');
-
-    if (domesticEl) domesticEl.textContent = domesticSum ? domesticSum.toLocaleString() : '';
-    if (exportEl) exportEl.textContent = exportSum ? exportSum.toLocaleString() : '';
-    if (grandEl) grandEl.textContent = (domesticSum + exportSum) ? (domesticSum + exportSum).toLocaleString() : '';
+    /* ── 6) tfoot: 총 합계 ── */
+    if (tfoot) {
+        var grandTotal = domesticTotal + exportTotal;
+        tfoot.innerHTML =
+            '<tr class="slitter-grandtotal-row">' +
+                '<td class="grandtotal-label" colspan="4">총 합계</td>' +
+                '<td class="grandtotal-value">' + Number(Math.round(grandTotal)).toLocaleString() + '</td>' +
+            '</tr>';
+    }
 }
 
 /**

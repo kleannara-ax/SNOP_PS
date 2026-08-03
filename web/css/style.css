@@ -361,12 +361,11 @@ main {
     font-size: 0.83rem;
 }
 /* 컬럼 너비 */
-.slitter-table .col-date         { min-width: 90px; }
-.slitter-table .col-domestic     { min-width: 80px; }
-.slitter-table .col-paper-code   { min-width: 90px; }
-.slitter-table .col-basis-weight { min-width: 70px; }
-.slitter-table .col-width        { min-width: 80px; }
-.slitter-table .col-weight       { min-width: 80px; }
+.slitter-table .col-domestic     { min-width: 90px; }
+.slitter-table .col-paper-code   { min-width: 100px; }
+.slitter-table .col-basis-weight { min-width: 80px; }
+.slitter-table .col-width        { min-width: 90px; }
+.slitter-table .col-weight       { min-width: 110px; }
 
 /* 월 선택기 */
 .slitter-detail-month-input {
@@ -404,45 +403,70 @@ main {
 .slitter-row .slitter-weight-cell {
     text-align: right;
     font-variant-numeric: tabular-nums;
-}
-.slitter-row td:first-child {
     font-weight: 600;
-    color: #334155;
-    text-align: left;
-    padding-left: 18px;
 }
-.slitter-table tbody tr:hover td {
+.slitter-table tbody tr.slitter-row:hover td {
     background: #f8fafd;
 }
 
-/* 소계 행 (내수 합계 / 수출 합계) */
-.slitter-subtotal-row td {
+/* ── 내수구분 rowspan 셀 (세로 병합) ── */
+.slitter-domestic-cell {
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+    text-align: center;
+    border-right: 2px solid #e2e8f0;
+}
+.slitter-domestic-domestic {
     background: #eff6ff;
+    color: #1d4ed8;
+}
+.slitter-domestic-export {
+    background: #fef3f2;
+    color: #dc2626;
+}
+
+/* 소계 행 아래 구분 (내수↔수출 사이) */
+.slitter-subtotal-row td {
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* ── 소계 행 (내수 합계 / 수출 합계) ── */
+.slitter-subtotal-row td {
     font-weight: 600;
     color: #1e293b;
+}
+.slitter-subtotal-domestic td {
+    background: #eff6ff;
+}
+.slitter-subtotal-export td {
+    background: #fef3f2;
 }
 .slitter-subtotal-row .subtotal-label {
     text-align: left;
     padding-left: 18px;
-    color: #1d4ed8;
     font-weight: 700;
 }
+.slitter-subtotal-domestic .subtotal-label { color: #1d4ed8; }
+.slitter-subtotal-export .subtotal-label   { color: #dc2626; }
 .slitter-subtotal-row .subtotal-value {
     font-weight: 700;
-    color: #1d4ed8;
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
+.slitter-subtotal-domestic .subtotal-value { color: #1d4ed8; }
+.slitter-subtotal-export .subtotal-value   { color: #dc2626; }
 .slitter-table tbody tr.slitter-subtotal-row:hover td {
-    background: #e0ecff;
+    filter: brightness(0.97);
 }
 
-/* 총 합계 행 */
+/* ── 총 합계 행 ── */
 .slitter-grandtotal-row td {
     background: #f6f8fb;
     font-weight: 700;
     color: #1e293b;
-    border-top: 2px solid #e2e8f0;
+    border-top: 2px solid #cbd5e1;
 }
 .slitter-grandtotal-row .grandtotal-label {
     text-align: left;
@@ -456,20 +480,14 @@ main {
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
-.slitter-table tbody tr.slitter-grandtotal-row:hover td {
-    background: #eef1f5;
-}
 
-/* tfoot도 동일한 스타일 적용 */
+/* tfoot 스타일 */
 .slitter-table tfoot td {
     border: none;
     border-bottom: 1px solid #edf0f4;
     padding: 11px 16px;
     font-size: 0.85rem;
     white-space: nowrap;
-}
-.slitter-table tfoot tr.slitter-subtotal-row:hover td {
-    background: #e0ecff;
 }
 .slitter-table tfoot tr.slitter-grandtotal-row:hover td {
     background: #eef1f5;

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260803b">
+    <link rel="stylesheet" href="css/style.css?v=20260803c">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -798,35 +798,23 @@
                             <table class="slitter-table" id="slitter-table">
                                 <thead>
                                     <tr>
-                                        <th class="col-date">일자</th>
                                         <th class="col-domestic">내수구분</th>
                                         <th class="col-paper-code">지종코드</th>
                                         <th class="col-basis-weight">평량</th>
                                         <th class="col-width">가로길이</th>
-                                        <th class="col-weight">중량</th>
+                                        <th class="col-weight">중량(합계)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="slitter-tbody">
-                                    <!-- JS에서 동적 생성 -->
+                                    <!-- JS에서 VLOOKUP 그룹핑 동적 생성 -->
                                 </tbody>
-                                <tfoot>
-                                    <tr class="slitter-subtotal-row" id="domestic-subtotal-row">
-                                        <td class="subtotal-label" colspan="5">내수 합계</td>
-                                        <td class="subtotal-value" id="domestic-weight-sum"></td>
-                                    </tr>
-                                    <tr class="slitter-subtotal-row" id="export-subtotal-row">
-                                        <td class="subtotal-label" colspan="5">수출 합계</td>
-                                        <td class="subtotal-value" id="export-weight-sum"></td>
-                                    </tr>
-                                    <tr class="slitter-grandtotal-row">
-                                        <td class="grandtotal-label" colspan="5">총 합계</td>
-                                        <td class="grandtotal-value" id="grand-weight-sum"></td>
-                                    </tr>
+                                <tfoot id="slitter-tfoot">
+                                    <!-- JS에서 내수합계/수출합계/총합계 동적 생성 -->
                                 </tfoot>
                             </table>
                         </div>
                     </div>
-                    <p class="slitter-note">* 데이터는 외부 시스템 연동(Vlookup 기반)으로 적재됩니다. 지종코드 → 평량 → 가로길이 순 정렬.</p>
+                    <p class="slitter-note">* 내수/수출 → 지종코드 → 평량 → 가로길이 기준 VLOOKUP 집계. 해당월 1일~당일 데이터.</p>
                 </div>
 
                 <!-- 오른쪽 카드: 추가 콘텐츠 영역 -->
@@ -1441,6 +1429,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260803b"></script>
+<script src="js/app.js?v=20260803c"></script>
 </body>
 </html>
