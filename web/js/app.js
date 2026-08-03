@@ -2914,6 +2914,7 @@ function renderSlitterDetailTable() {
     slitterDetailState.domesticTon = domesticTotal / 1000;
     slitterDetailState.exportTon = exportTotal / 1000;
     updateSlitterAnalysis();
+    renderSlitterDailyChart();
 }
 
 /**
@@ -2940,6 +2941,148 @@ function updateSlitterAnalysis() {
     resultEl.innerHTML =
         '수출 <strong>' + expDays + '일</strong> 소요, ' +
         '내수 <strong>' + domDays + '일</strong> 소요';
+}
+
+/**
+ * 슬리터 일자별 내수/수출 꺾은선 차트
+ */
+var slitterDailyChartInstance = null;
+
+function renderSlitterDailyChart() {
+    var canvas = document.getElementById('slitter-daily-chart');
+    if (!canvas) return;
+
+    var rows = slitterDetailState.rows || [];
+
+    /* ── 일자별 내수/수출 합계 (ton) ── */
+    var dailyMap = {};
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        if (r.domestic === '내수') {
+            dailyMap[date].domestic += (Number(r.weight) || 0);
+        } else {
+            dailyMap[date].export += (Number(r.weight) || 0);
+        }
+    });
+
+    var dates = Object.keys(dailyMap).sort();
+    /* 일자 라벨: "7/4", "7/10" 형태 */
+    var labels = dates.map(function (d) {
+        var parts = d.split('-');
+        return Number(parts[1]) + '/' + Number(parts[2]);
+    });
+    var domesticData = dates.map(function (d) {
+        return Math.round(dailyMap[d].domestic / 100) / 10;  /* ton, 소수 1자리 */
+    });
+    var exportData = dates.map(function (d) {
+        return Math.round(dailyMap[d].export / 100) / 10;
+    });
+
+    /* 기존 차트 파기 */
+    if (slitterDailyChartInstance) {
+        slitterDailyChartInstance.destroy();
+        slitterDailyChartInstance = null;
+    }
+
+    if (dates.length === 0) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    slitterDailyChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '수출',
+                    data: exportData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ef4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true,
+                },
+                {
+                    label: '내수',
+                    data: domesticData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        borderRadius: 3,
+                        useBorderRadius: true,
+                        padding: 16,
+                        font: { family: "'Noto Sans KR', sans-serif", size: 12, weight: '600' },
+                        color: '#475569',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    bodyFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { color: '#e2e8f0' },
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                        callback: function (v) { return v + 't'; },
+                    },
+                    border: { display: false },
+                },
+            },
+        },
+    });
 }
 
 /**

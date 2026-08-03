@@ -286,33 +286,16 @@ main {
     box-shadow: 0 5px 15px rgba(15, 23, 42, 0.08);
 }
 
-/* 오른쪽 카드 플레이스홀더 */
+/* 오른쪽 카드: 차트 */
 .slitter-right-card {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     min-height: 300px;
 }
-.slitter-right-placeholder {
-    text-align: center;
-    color: #94a3b8;
-}
-.slitter-right-placeholder .placeholder-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: #f1f5f9;
-    color: #94a3b8;
-    font-size: 1.5rem;
-    font-weight: 300;
-    margin-bottom: 12px;
-}
-.slitter-right-placeholder p {
-    font-size: 0.9rem;
-    color: #94a3b8;
+.slitter-chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 260px;
     margin: 0;
 }
 .slitter-card-header {

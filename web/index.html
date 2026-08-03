@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260803j">
+    <link rel="stylesheet" href="css/style.css?v=20260803k">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -825,12 +825,15 @@
                     <p class="slitter-note">* 내수/수출 → 지종코드 → 평량 → 가로길이 기준 VLOOKUP 집계. 해당월 1일~당일 데이터.</p>
                 </div>
 
-                <!-- 오른쪽 카드: 추가 콘텐츠 영역 -->
+                <!-- 오른쪽 카드: 일자별 내수/수출 차트 -->
                 <div class="slitter-card slitter-right-card">
-                    <div class="slitter-right-placeholder">
-                        <span class="placeholder-icon">+</span>
-                        <p>콘텐츠 영역</p>
+                    <div class="slitter-card-header">
+                        <h3 class="slitter-card-title">일자별 재단 추이</h3>
                     </div>
+                    <div class="slitter-chart-wrap">
+                        <canvas id="slitter-daily-chart"></canvas>
+                    </div>
+                    <p class="slitter-note" id="slitter-chart-note">* 해당월 일자별 내수/수출 중량(ton) 추이</p>
                 </div>
             </div>
 
@@ -1437,6 +1440,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260803j"></script>
+<script src="js/app.js?v=20260803k"></script>
 </body>
 </html>
