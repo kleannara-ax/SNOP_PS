@@ -7927,57 +7927,6 @@ td.number {
 .subulbu-date-th.subulbu-sat { color: #3b82f6; }
 .subulbu-date-th.subulbu-sun { color: #ef4444; }
 
-/* ── 수불부 기말 입력 필드 ── */
-.subulbu-gimal-input {
-    width: 58px;
-    padding: 3px 5px;
-    border: 1px solid #bfdbfe;
-    border-radius: 5px;
-    font-size: 0.82rem;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 600;
-    color: #1e40af;
-    text-align: center;
-    background: #eff6ff;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    -moz-appearance: textfield;
-}
-.subulbu-gimal-input::-webkit-inner-spin-button,
-.subulbu-gimal-input::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-.subulbu-gimal-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
-    background: #fff;
-}
-.subulbu-gimal-input:hover {
-    border-color: #93c5fd;
-}
-
-/* ── 수불부 저장 버튼 ── */
-.btn-subulbu-save {
-    padding: 6px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    font-family: 'Noto Sans KR', sans-serif;
-    cursor: pointer;
-    background: var(--primary, #2563eb);
-    color: #fff;
-    transition: background 0.2s, opacity 0.2s;
-}
-.btn-subulbu-save:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-.btn-subulbu-save:not(:disabled):hover {
-    background: #1d4ed8;
-}
-
 /* ── 수불부 입고 행 하이라이트 ── */
 .subulbu-row-ipgo td.subulbu-data {
     color: #047857;

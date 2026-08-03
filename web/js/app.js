@@ -2259,9 +2259,7 @@ const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
 /** 수불부 상태 관리 */
 const subulbuState = {
     yearMonth: '',              // 'YYYY-MM'
-    gimal: {},                  // { "1": 100.5, "2": 80.3, ... } — ton 단위
     prevMonthLastGimal: 0,      // 전월 마지막 일의 기말값 (ton)
-    hasChanges: false,
 };
 
 /**
@@ -2295,15 +2293,17 @@ function aggregateSlitterDaily(yearMonth) {
 
 /**
  * 수불부 산술 계산
+ * 기말 = 일자별 상세 내역의 1일~해당일까지 누적 총합계 (ton)
  * @param {number} daysInMonth — 해당 월 일수
  * @param {{ [day: string]: { domestic: number, export: number } }} dailyIF — I/F 집계
- * @param {{ [day: string]: number }} gimalInput — 기말 수기입력값 (ton)
  * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
  */
-function calcSubulbu(daysInMonth, dailyIF, gimalInput, prevMonthLastGimal) {
+function calcSubulbu(daysInMonth, dailyIF, prevMonthLastGimal) {
     var kicho = [], ipgo = [], naesu = [], suchul = [], gye = [], gimal = [];
 
+    /* 기말 = 1일부터 해당일까지의 누적 총합계 (ton) */
+    var cumTotal = 0;
     for (var d = 1; d <= daysInMonth; d++) {
         var dayKey = String(d);
         var ifData = dailyIF[dayKey] || { domestic: 0, export: 0 };
@@ -2315,15 +2315,13 @@ function calcSubulbu(daysInMonth, dailyIF, gimalInput, prevMonthLastGimal) {
         /* 계 = 내수 + 수출 */
         var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
 
+        /* 기말 = 1일~해당일까지 누적 총합계 */
+        cumTotal += (ifData.domestic + ifData.export);
+        var gimalVal = Math.round(cumTotal * 10) / 10;
+
         /* 기초 = 전일 기말 (1일은 전월 마지막일 기말값) */
         var kichoVal = (d === 1) ? (prevMonthLastGimal || 0) : (gimal[d - 2] || 0);
         kichoVal = Math.round(kichoVal * 10) / 10;
-
-        /* 기말 = 수기입력값 */
-        var gimalVal = (gimalInput[dayKey] !== undefined && gimalInput[dayKey] !== null && gimalInput[dayKey] !== '')
-            ? Number(gimalInput[dayKey])
-            : 0;
-        gimalVal = Math.round(gimalVal * 10) / 10;
 
         /* 입고 = 기말 + 계 - 기초 */
         var ipgoVal = Math.round((gimalVal + gyeVal - kichoVal) * 10) / 10;
@@ -2379,16 +2377,16 @@ function renderSubulbuTable(year, month) {
     var dailyIF = aggregateSlitterDaily(yearMonth);
 
     /* ── 산술 계산 (전월 기말값 포함) ── */
-    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal, subulbuState.prevMonthLastGimal);
+    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.prevMonthLastGimal);
 
-    /* ── 행 구조 정의 ── */
+    /* ── 행 구조 정의 (기말 포함 전체 자동계산) ── */
     const rowDefs = [
-        { key: 'kicho',       label: '기초',  colspan: true,  data: calc.kicho,  editable: false, cssClass: 'subulbu-row-kicho'  },
-        { key: 'ipgo',        label: '입고',  colspan: true,  data: calc.ipgo,   editable: false, cssClass: 'subulbu-row-ipgo'   },
-        { key: 'work-naesu',  label: '작업',  rowspan: true,  sub: '내수', data: calc.naesu,  editable: false, cssClass: 'subulbu-row-work-naesu'  },
-        { key: 'work-suchul', skipLabel: true, sub: '수출', data: calc.suchul, editable: false, cssClass: 'subulbu-row-work-suchul' },
-        { key: 'gye',         label: '계',    colspan: true,  data: calc.gye,    editable: false, cssClass: 'subulbu-row-gye'    },
-        { key: 'gimal',       label: '기말',  colspan: true,  data: calc.gimal,  editable: true,  cssClass: 'subulbu-row-gimal'  },
+        { key: 'kicho',       label: '기초',  colspan: true,  data: calc.kicho,  cssClass: 'subulbu-row-kicho'  },
+        { key: 'ipgo',        label: '입고',  colspan: true,  data: calc.ipgo,   cssClass: 'subulbu-row-ipgo'   },
+        { key: 'work-naesu',  label: '작업',  rowspan: true,  sub: '내수', data: calc.naesu,  cssClass: 'subulbu-row-work-naesu'  },
+        { key: 'work-suchul', skipLabel: true, sub: '수출', data: calc.suchul, cssClass: 'subulbu-row-work-suchul' },
+        { key: 'gye',         label: '계',    colspan: true,  data: calc.gye,    cssClass: 'subulbu-row-gye'    },
+        { key: 'gimal',       label: '기말',  colspan: true,  data: calc.gimal,  cssClass: 'subulbu-row-gimal'  },
     ];
 
     tbody.innerHTML = '';
@@ -2415,75 +2413,51 @@ function renderSubulbuTable(year, month) {
             tr.appendChild(tdSub);
         }
 
-        /* 날짜 데이터 셀 */
+        /* 날짜 데이터 셀 (전체 자동계산 — 수기입력 없음) */
         for (let d = 0; d < daysInMonth; d++) {
             const val = rowDef.data[d] || 0;
             const td = document.createElement('td');
             td.className = 'subulbu-data';
-
-            if (rowDef.editable) {
-                /* 기말: 수기 입력 가능 */
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.className = 'subulbu-gimal-input';
-                input.step = '0.1';
-                input.min = '0';
-                input.value = val ? val : '';
-                input.dataset.day = String(d + 1);
-                input.addEventListener('input', function () {
-                    var dayKey = this.dataset.day;
-                    var newVal = this.value !== '' ? parseFloat(this.value) : 0;
-                    subulbuState.gimal[dayKey] = newVal;
-                    subulbuState.hasChanges = true;
-
-                    /* 저장 버튼 활성화 */
-                    var saveBtn = document.getElementById('btn-subulbu-save');
-                    if (saveBtn) saveBtn.disabled = false;
-
-                    /* 산술 재계산 — 기말 변경 시 후속일 기초 + 입고 영향 */
-                    recalcSubulbu(daysInMonth);
-                });
-                td.appendChild(input);
-            } else {
-                /* 자동 계산 필드 — 값 표시 */
-                td.textContent = val ? val.toFixed(1) : '';
-                td.dataset.rowKey = rowDef.key;
-                td.dataset.dayIdx = String(d);
-            }
-
+            td.textContent = val ? val.toFixed(1) : '';
             tr.appendChild(td);
         }
 
         tbody.appendChild(tr);
     });
+
+    /* ── 기말 누적합을 서버에 자동저장 (다음달 1일 기초값 용) ── */
+    autoSaveSubulbuGimal(yearMonth, calc.gimal, daysInMonth);
 }
 
 /**
- * 기말 입력 변경 시 산술 재계산 (DOM 직접 업데이트)
+ * 기말 누적합을 서버에 자동저장 (백그라운드, UI 알림 없음)
+ * 다음 달의 1일 기초값으로 사용됨
+ * @param {string} yearMonth — 'YYYY-MM'
+ * @param {number[]} gimalArr — 일자별 기말값 배열
  * @param {number} daysInMonth — 해당 월 일수
  */
-function recalcSubulbu(daysInMonth) {
-    var yearMonth = subulbuState.yearMonth;
-    var dailyIF = aggregateSlitterDaily(yearMonth);
-    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal, subulbuState.prevMonthLastGimal);
+function autoSaveSubulbuGimal(yearMonth, gimalArr, daysInMonth) {
+    /* 기말 배열을 { "1": val, "2": val, ... } 객체로 변환 */
+    var gimalObj = {};
+    var hasData = false;
+    for (var d = 0; d < daysInMonth; d++) {
+        if (gimalArr[d]) {
+            gimalObj[String(d + 1)] = gimalArr[d];
+            hasData = true;
+        }
+    }
+    if (!hasData) return; /* 데이터 없으면 저장 안 함 */
 
-    /* 자동계산 행(기초/입고/내수/수출/계) DOM 업데이트 */
-    var autoRows = {
-        'kicho': calc.kicho,
-        'ipgo': calc.ipgo,
-        'work-naesu': calc.naesu,
-        'work-suchul': calc.suchul,
-        'gye': calc.gye
-    };
-
-    Object.keys(autoRows).forEach(function (key) {
-        var dataCells = document.querySelectorAll('.subulbu-row-' + key + ' td.subulbu-data');
-        var vals = autoRows[key];
-        dataCells.forEach(function (td, idx) {
-            if (idx < vals.length) {
-                td.textContent = vals[idx] ? vals[idx].toFixed(1) : '';
-            }
-        });
+    fetch('/api/slitter-subulbu/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: yearMonth,
+            gimal: gimalObj,
+            user_id: 'system',
+        }),
+    }).catch(function (err) {
+        console.error('[수불부 기말 자동저장 오류]', err);
     });
 }
 
@@ -2521,8 +2495,8 @@ function extractPrevMonthLastGimal(prevData) {
 }
 
 /**
- * 서버에서 수불부 기말 데이터 로드 후 테이블 렌더
- * 현재 월 + 전월 데이터를 동시에 fetch하여 1일 기초값을 전월 기말에서 가져옴
+ * 전월 기말값 로드 후 테이블 렌더
+ * 전월 마지막 일 누적합 = 1일 기초값
  */
 function loadSubulbuData() {
     var ym = subulbuState.yearMonth;
@@ -2530,30 +2504,14 @@ function loadSubulbuData() {
 
     var prevYm = getPrevYearMonth(ym);
 
-    /* 현재 월 + 전월 데이터 동시 로드 */
-    Promise.all([
-        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(ym)).then(function (r) { return r.json(); }),
-        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm)).then(function (r) { return r.json(); })
-    ])
-        .then(function (results) {
-            var curResult = results[0];
-            var prevResult = results[1];
-
-            /* 현재 월 기말 데이터 */
-            if (curResult.success && curResult.data) {
-                subulbuState.gimal = curResult.data.gimal || {};
-            } else {
-                subulbuState.gimal = {};
-            }
-
-            /* 전월 마지막 일 기말값 → 1일 기초 */
+    /* 전월 슬리터 상세 데이터에서 전월 총합계를 구하기 위해
+       전월 수불부 저장값(전월 기말)을 로드한다 */
+    fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm))
+        .then(function (r) { return r.json(); })
+        .then(function (prevResult) {
             subulbuState.prevMonthLastGimal = extractPrevMonthLastGimal(
                 (prevResult.success && prevResult.data) ? prevResult.data : null
             );
-
-            subulbuState.hasChanges = false;
-            var saveBtn = document.getElementById('btn-subulbu-save');
-            if (saveBtn) saveBtn.disabled = true;
 
             /* 렌더링 */
             var parts = ym.split('-');
@@ -2561,43 +2519,9 @@ function loadSubulbuData() {
         })
         .catch(function (err) {
             console.error('[수불부 로드 오류]', err);
-            subulbuState.gimal = {};
             subulbuState.prevMonthLastGimal = 0;
             var parts = ym.split('-');
             renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
-        });
-}
-
-/**
- * 수불부 기말 데이터 서버 저장
- */
-function saveSubulbuData() {
-    var ym = subulbuState.yearMonth;
-    if (!ym) return;
-
-    fetch('/api/slitter-subulbu/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            year_month: ym,
-            gimal: subulbuState.gimal,
-            user_id: 'admin',
-        }),
-    })
-        .then(function (res) { return res.json(); })
-        .then(function (result) {
-            if (result.success) {
-                subulbuState.hasChanges = false;
-                var saveBtn = document.getElementById('btn-subulbu-save');
-                if (saveBtn) saveBtn.disabled = true;
-                alert('슬리터 수불부가 저장되었습니다.');
-            } else {
-                alert('저장 실패: ' + (result.message || ''));
-            }
-        })
-        .catch(function (err) {
-            console.error('[수불부 저장 오류]', err);
-            alert('저장 중 오류가 발생했습니다.');
         });
 }
 
@@ -2615,31 +2539,16 @@ function initSubulbuMonthSelector() {
     monthInput.value = yyyy + '-' + mm;
     subulbuState.yearMonth = yyyy + '-' + mm;
 
-    /* 초기 로드 (서버에서 기말 데이터 가져온 뒤 렌더) */
+    /* 초기 로드 */
     loadSubulbuData();
 
     /* 월 변경 시 다시 로드 */
     monthInput.addEventListener('change', function () {
         const val = this.value;
         if (!val) return;
-
-        /* 미저장 경고 */
-        if (subulbuState.hasChanges) {
-            if (!confirm('저장하지 않은 변경사항이 있습니다. 월을 변경하시겠습니까?')) {
-                this.value = subulbuState.yearMonth;
-                return;
-            }
-        }
-
         subulbuState.yearMonth = val;
         loadSubulbuData();
     });
-
-    /* 저장 버튼 바인딩 */
-    var saveBtn = document.getElementById('btn-subulbu-save');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', saveSubulbuData);
-    }
 }
 
 /* ══════════════════════════════════════════════
