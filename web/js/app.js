@@ -2740,8 +2740,8 @@ var slitterDetailState = {
 };
 
 /**
- * 슬리터 일자별 상세 내역 — VLOOKUP 집계 테이블 렌더링
- * 내수/수출 → 지종코드 → 평량 → 가로길이 기준 중량 SUM
+ * 슬리터 일자별 상세 내역 — VLOOKUP 계층적 병합 테이블
+ * 내수구분(rowspan) → 지종코드(rowspan) → 평량(rowspan) → 가로길이 → 중량 SUM
  */
 function renderSlitterDetailTable() {
     var tbody = document.getElementById('slitter-tbody');
@@ -2773,7 +2773,7 @@ function renderSlitterDetailTable() {
         groupMap[key].weight += (Number(r.weight) || 0);
     });
 
-    /* 그룹 배열로 변환 후 정렬: 내수→수출, 지종코드, 평량, 가로길이 */
+    /* 정렬: 내수→수출, 지종코드, 평량, 가로길이 */
     var grouped = Object.values(groupMap);
     grouped.sort(function (a, b) {
         var dOrder = { '내수': 0, '수출': 1 };
@@ -2785,29 +2785,75 @@ function renderSlitterDetailTable() {
         return a.width - b.width;
     });
 
-    /* ── 2) 내수/수출 각 그룹 분리 ── */
+    /* ── 2) 계층적 rowspan 계산 ── */
+    /* domestic → 해당 domestic의 전체 행 수 */
+    function countByDomestic(items, dom) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) { if (items[i].domestic === dom) n++; }
+        return n;
+    }
+    /* domestic+paper_code → 해당 조합의 행 수 */
+    function countByCode(items, dom, code) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].domestic === dom && items[i].paper_code === code) n++;
+        }
+        return n;
+    }
+    /* domestic+paper_code+basis_weight → 해당 조합의 행 수 */
+    function countByBW(items, dom, code, bw) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].domestic === dom && items[i].paper_code === code && items[i].basis_weight === bw) n++;
+        }
+        return n;
+    }
+
+    /* ── 3) 그룹별 렌더링 ── */
     var domesticItems = grouped.filter(function (g) { return g.domestic === '내수'; });
     var exportItems = grouped.filter(function (g) { return g.domestic === '수출'; });
 
-    /* ── 3) 그룹별 렌더링 함수 ── */
     function renderGroup(items, groupLabel, groupClass) {
         var groupSum = 0;
+        var prevCode = null;
+        var prevBW = null;
 
         items.forEach(function (item, idx) {
             var tr = document.createElement('tr');
             tr.className = 'slitter-row slitter-group-' + groupClass;
+            var html = '';
 
-            /* 첫 번째 행에만 내수구분 rowspan */
-            var domesticCell = '';
+            /* ① 내수구분 — 그룹 첫 행에만 rowspan */
             if (idx === 0) {
-                domesticCell = '<td class="slitter-domestic-cell slitter-domestic-' + groupClass + '" rowspan="' + items.length + '">' + groupLabel + '</td>';
+                var domSpan = items.length;
+                html += '<td class="slitter-merge-cell slitter-domestic-cell slitter-domestic-' + groupClass + '" rowspan="' + domSpan + '">' + groupLabel + '</td>';
             }
 
-            tr.innerHTML = domesticCell +
-                '<td>' + (item.paper_code || '') + '</td>' +
-                '<td>' + (item.basis_weight != null ? Number(item.basis_weight).toLocaleString() : '') + '</td>' +
-                '<td>' + (item.width != null ? Number(item.width).toLocaleString() : '') + '</td>' +
-                '<td class="slitter-weight-cell">' + (item.weight ? Number(Math.round(item.weight)).toLocaleString() : '0') + '</td>';
+            /* ② 지종코드 — 같은 코드 첫 등장 시 rowspan */
+            var isNewCode = (item.paper_code !== prevCode);
+            if (isNewCode) {
+                var codeSpan = countByCode(items, item.domestic, item.paper_code);
+                html += '<td class="slitter-merge-cell slitter-code-cell" rowspan="' + codeSpan + '">' + (item.paper_code || '') + '</td>';
+                prevCode = item.paper_code;
+                prevBW = null;          /* 코드 변경 시 평량도 리셋 */
+            }
+
+            /* ③ 평량 — 같은 코드+평량 첫 등장 시 rowspan */
+            var isNewBW = (item.basis_weight !== prevBW) || isNewCode;
+            if (isNewBW) {
+                var bwSpan = countByBW(items, item.domestic, item.paper_code, item.basis_weight);
+                html += '<td class="slitter-merge-cell slitter-bw-cell" rowspan="' + bwSpan + '">' +
+                    (item.basis_weight != null ? Number(item.basis_weight).toLocaleString() : '') + '</td>';
+                prevBW = item.basis_weight;
+            }
+
+            /* ④ 가로길이 — 항상 표시 */
+            html += '<td>' + (item.width != null ? Number(item.width).toLocaleString() : '') + '</td>';
+
+            /* ⑤ 중량(합계) — 항상 표시 */
+            html += '<td class="slitter-weight-cell">' + (item.weight ? Number(Math.round(item.weight)).toLocaleString() : '0') + '</td>';
+
+            tr.innerHTML = html;
             tbody.appendChild(tr);
             groupSum += item.weight;
         });

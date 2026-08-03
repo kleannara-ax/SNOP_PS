@@ -409,22 +409,41 @@ main {
     background: #f8fafd;
 }
 
-/* ── 내수구분 rowspan 셀 (세로 병합) ── */
+/* ── 계층적 병합 셀 공통 ── */
+.slitter-merge-cell {
+    vertical-align: middle;
+    text-align: center;
+    font-weight: 600;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* ── 내수구분 rowspan (1단계) ── */
 .slitter-domestic-cell {
     font-weight: 700;
     font-size: 0.88rem;
     letter-spacing: 0.02em;
-    vertical-align: middle;
-    text-align: center;
     border-right: 2px solid #e2e8f0;
 }
 .slitter-domestic-domestic {
-    background: #eff6ff;
+    background: #eff6ff !important;
     color: #1d4ed8;
 }
 .slitter-domestic-export {
-    background: #fef3f2;
+    background: #fef3f2 !important;
     color: #dc2626;
+}
+
+/* ── 지종코드 rowspan (2단계) ── */
+.slitter-code-cell {
+    font-weight: 600;
+    color: #334155;
+    background: #f8fafc !important;
+}
+
+/* ── 평량 rowspan (3단계) ── */
+.slitter-bw-cell {
+    color: #475569;
+    background: #fafbfc !important;
 }
 
 /* 소계 행 아래 구분 (내수↔수출 사이) */
