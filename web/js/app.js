@@ -2915,6 +2915,7 @@ function renderSlitterDetailTable() {
     slitterDetailState.exportTon = exportTotal / 1000;
     updateSlitterAnalysis();
     renderSlitterDailyChart();
+    renderSlitterSubulbuChart();
 }
 
 /**
@@ -3077,6 +3078,176 @@ function renderSlitterDailyChart() {
                         font: { family: "'Noto Sans KR', sans-serif", size: 11 },
                         color: '#94a3b8',
                         callback: function (v) { return v + 't'; },
+                    },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * 슬리터 수불부 추이 차트
+ * 일자별 입고 / 출고(내수+수출) / 누적재고 추이
+ */
+var slitterSubulbuChartInstance = null;
+
+function renderSlitterSubulbuChart() {
+    var canvas = document.getElementById('slitter-subulbu-chart');
+    if (!canvas) return;
+
+    var rows = slitterDetailState.rows || [];
+
+    /* ── 일자별 출고량 집계 (ton) ── */
+    var dailyMap = {};
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        if (r.domestic === '내수') {
+            dailyMap[date].domestic += (Number(r.weight) || 0);
+        } else {
+            dailyMap[date].export += (Number(r.weight) || 0);
+        }
+    });
+
+    var dates = Object.keys(dailyMap).sort();
+
+    /* 기존 차트 파기 */
+    if (slitterSubulbuChartInstance) {
+        slitterSubulbuChartInstance.destroy();
+        slitterSubulbuChartInstance = null;
+    }
+
+    if (dates.length === 0) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    var labels = dates.map(function (d) {
+        var parts = d.split('-');
+        return Number(parts[1]) + '/' + Number(parts[2]);
+    });
+
+    /* 일자별 출고(작업) = 내수 + 수출 */
+    var shipOutData = dates.map(function (d) {
+        return Math.round((dailyMap[d].domestic + dailyMap[d].export) / 100) / 10;
+    });
+
+    /* 누적 출고량 */
+    var cumulative = [];
+    var runningTotal = 0;
+    dates.forEach(function (d) {
+        runningTotal += (dailyMap[d].domestic + dailyMap[d].export) / 1000;
+        cumulative.push(Math.round(runningTotal * 10) / 10);
+    });
+
+    slitterSubulbuChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '일 출고량',
+                    data: shipOutData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 2,
+                    yAxisID: 'y',
+                },
+                {
+                    label: '누적 출고',
+                    data: cumulative,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    order: 1,
+                    yAxisID: 'y1',
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        borderRadius: 3,
+                        useBorderRadius: true,
+                        padding: 16,
+                        font: { family: "'Noto Sans KR', sans-serif", size: 12, weight: '600' },
+                        color: '#475569',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    bodyFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { color: '#e2e8f0' },
+                },
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '일 출고(ton)',
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#10b981',
+                    },
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { display: false },
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '누적(ton)',
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#f59e0b',
+                    },
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
                     },
                     border: { display: false },
                 },

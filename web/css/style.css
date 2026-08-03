@@ -286,16 +286,20 @@ main {
     box-shadow: 0 5px 15px rgba(15, 23, 42, 0.08);
 }
 
-/* 오른쪽 카드: 차트 */
-.slitter-right-card {
+/* 오른쪽 카드: 상하 2분할 스택 */
+.slitter-right-stack {
     display: flex;
     flex-direction: column;
-    min-height: 300px;
+    gap: 20px;
+}
+.slitter-chart-card {
+    display: flex;
+    flex-direction: column;
 }
 .slitter-chart-wrap {
     flex: 1;
     position: relative;
-    min-height: 260px;
+    min-height: 220px;
     margin: 0;
 }
 .slitter-card-header {
