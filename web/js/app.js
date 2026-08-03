@@ -2903,6 +2903,23 @@ function saveSlitterDetail() {
  * 슬리터 일자별 상세 내역 초기화
  */
 function initSlitterDetail() {
+    /* 월 선택기 초기값 = 시스템 현재 월 */
+    var monthInput = document.getElementById('slitter-detail-month');
+    if (monthInput) {
+        var now = new Date();
+        var currentYM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = currentYM;
+        slitterDetailState.yearMonth = currentYM;
+
+        /* 월 변경 이벤트 */
+        monthInput.addEventListener('change', function () {
+            var val = this.value;
+            if (!val) return;
+            slitterDetailState.yearMonth = val;
+            loadSlitterDetail();
+        });
+    }
+
     /* 저장 버튼 바인딩 */
     var saveBtn = document.getElementById('btn-slitter-detail-save');
     if (saveBtn) {
