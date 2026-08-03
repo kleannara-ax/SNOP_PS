@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260730t">
+    <link rel="stylesheet" href="css/style.css?v=20260803a">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -787,13 +787,17 @@
                 <div class="slitter-card">
                     <div class="slitter-card-header">
                         <h3 class="slitter-card-title">일자별 상세 내역</h3>
-                        <button class="primary small" id="btn-slitter-export" disabled>엑셀 다운로드</button>
+                        <div class="slitter-detail-controls">
+                            <button class="btn-slitter-detail-save primary small" id="btn-slitter-detail-save" disabled>저장</button>
+                            <button class="primary small" id="btn-slitter-export" disabled>엑셀 다운로드</button>
+                        </div>
                     </div>
                     <div class="table-scroll-container">
                         <div class="table-wrapper" style="overflow-x:auto;">
                             <table class="slitter-table" id="slitter-table">
                                 <thead>
                                     <tr>
+                                        <th class="col-date">일자</th>
                                         <th class="col-domestic">내수구분</th>
                                         <th class="col-paper-code">지종코드</th>
                                         <th class="col-basis-weight">평량</th>
@@ -802,36 +806,22 @@
                                     </tr>
                                 </thead>
                                 <tbody id="slitter-tbody">
-                                    <!-- ── 내수 그룹 ── -->
-                                    <tr class="slitter-row" data-group="domestic">
-                                        <td>내수</td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td class="slitter-weight-cell"></td>
-                                    </tr>
-                                    <tr class="slitter-subtotal-row" data-group="domestic-subtotal">
-                                        <td class="subtotal-label" colspan="4">내수 합계</td>
+                                    <!-- JS에서 동적 생성 -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="slitter-subtotal-row" id="domestic-subtotal-row">
+                                        <td class="subtotal-label" colspan="5">내수 합계</td>
                                         <td class="subtotal-value" id="domestic-weight-sum"></td>
                                     </tr>
-                                    <!-- ── 수출 그룹 ── -->
-                                    <tr class="slitter-row" data-group="export">
-                                        <td>수출</td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td class="slitter-weight-cell"></td>
-                                    </tr>
-                                    <tr class="slitter-subtotal-row" data-group="export-subtotal">
-                                        <td class="subtotal-label" colspan="4">수출 합계</td>
+                                    <tr class="slitter-subtotal-row" id="export-subtotal-row">
+                                        <td class="subtotal-label" colspan="5">수출 합계</td>
                                         <td class="subtotal-value" id="export-weight-sum"></td>
                                     </tr>
-                                    <!-- ── 총 합계 ── -->
                                     <tr class="slitter-grandtotal-row">
-                                        <td class="grandtotal-label" colspan="4">총 합계</td>
+                                        <td class="grandtotal-label" colspan="5">총 합계</td>
                                         <td class="grandtotal-value" id="grand-weight-sum"></td>
                                     </tr>
-                                </tbody>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -1450,6 +1440,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260730t"></script>
+<script src="js/app.js?v=20260803a"></script>
 </body>
 </html>

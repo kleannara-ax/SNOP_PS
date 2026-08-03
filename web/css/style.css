@@ -361,11 +361,19 @@ main {
     font-size: 0.83rem;
 }
 /* 컬럼 너비 */
+.slitter-table .col-date         { min-width: 90px; }
 .slitter-table .col-domestic     { min-width: 80px; }
 .slitter-table .col-paper-code   { min-width: 90px; }
 .slitter-table .col-basis-weight { min-width: 70px; }
 .slitter-table .col-width        { min-width: 80px; }
 .slitter-table .col-weight       { min-width: 80px; }
+
+/* 저장 버튼 영역 */
+.slitter-detail-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
 /* 데이터 행 */
 .slitter-row td {
@@ -429,6 +437,35 @@ main {
 }
 .slitter-table tbody tr.slitter-grandtotal-row:hover td {
     background: #eef1f5;
+}
+
+/* tfoot도 동일한 스타일 적용 */
+.slitter-table tfoot td {
+    border: none;
+    border-bottom: 1px solid #edf0f4;
+    padding: 11px 16px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+.slitter-table tfoot tr.slitter-subtotal-row:hover td {
+    background: #e0ecff;
+}
+.slitter-table tfoot tr.slitter-grandtotal-row:hover td {
+    background: #eef1f5;
+}
+
+/* 빈 행 메시지 */
+.slitter-empty-msg {
+    text-align: center !important;
+    color: #94a3b8;
+    font-size: 0.83rem;
+    padding: 16px !important;
+}
+
+/* 중량 셀 우측 정렬 */
+.slitter-weight-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 /* ═══ APP LAYOUT (Sidebar + Content) ═══ */

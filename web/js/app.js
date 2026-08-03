@@ -2730,11 +2730,87 @@ function initOutsource() {
     }
 }
 
+/* ══════════════════════════════════════════════
+   슬리터 일자별 상세 내역 — 데이터 관리
+   ══════════════════════════════════════════════ */
+var slitterDetailState = {
+    yearMonth: '',
+    rows: [],
+    hasChanges: false,
+};
+
 /**
- * 슬리터 일자별 상세내역 — 중량 합계 자동 계산
- * - 내수 합계: data-group="domestic" 행들의 중량(6번째 td) 합산
- * - 수출 합계: data-group="export"   행들의 중량(6번째 td) 합산
- * - 총 합계:  내수 합계 + 수출 합계
+ * 슬리터 일자별 상세 내역 테이블 렌더링
+ * rows 데이터를 내수/수출로 분류하여 tbody에 그린다
+ */
+function renderSlitterDetailTable() {
+    var tbody = document.getElementById('slitter-tbody');
+    if (!tbody) return;
+
+    var rows = slitterDetailState.rows || [];
+
+    /* 내수/수출 분류 */
+    var domesticRows = rows.filter(function (r) { return r.domestic === '내수'; });
+    var exportRows = rows.filter(function (r) { return r.domestic === '수출'; });
+
+    tbody.innerHTML = '';
+
+    /* 내수 행 */
+    domesticRows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        tr.className = 'slitter-row';
+        tr.dataset.group = 'domestic';
+        tr.dataset.rowId = row.id || '';
+        tr.innerHTML =
+            '<td>' + (row.date || '') + '</td>' +
+            '<td>' + (row.domestic || '') + '</td>' +
+            '<td>' + (row.paper_code || '') + '</td>' +
+            '<td>' + (row.basis_weight != null ? row.basis_weight : '') + '</td>' +
+            '<td>' + (row.width != null ? row.width : '') + '</td>' +
+            '<td class="slitter-weight-cell">' + (row.weight != null ? Number(row.weight).toLocaleString() : '') + '</td>';
+        tbody.appendChild(tr);
+    });
+
+    /* 내수 행이 없으면 빈 행 표시 */
+    if (domesticRows.length === 0) {
+        var emptyDomestic = document.createElement('tr');
+        emptyDomestic.className = 'slitter-row';
+        emptyDomestic.dataset.group = 'domestic';
+        emptyDomestic.innerHTML = '<td colspan="6" class="slitter-empty-msg">내수 데이터 없음</td>';
+        tbody.appendChild(emptyDomestic);
+    }
+
+    /* 수출 행 */
+    exportRows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        tr.className = 'slitter-row';
+        tr.dataset.group = 'export';
+        tr.dataset.rowId = row.id || '';
+        tr.innerHTML =
+            '<td>' + (row.date || '') + '</td>' +
+            '<td>' + (row.domestic || '') + '</td>' +
+            '<td>' + (row.paper_code || '') + '</td>' +
+            '<td>' + (row.basis_weight != null ? row.basis_weight : '') + '</td>' +
+            '<td>' + (row.width != null ? row.width : '') + '</td>' +
+            '<td class="slitter-weight-cell">' + (row.weight != null ? Number(row.weight).toLocaleString() : '') + '</td>';
+        tbody.appendChild(tr);
+    });
+
+    /* 수출 행이 없으면 빈 행 표시 */
+    if (exportRows.length === 0) {
+        var emptyExport = document.createElement('tr');
+        emptyExport.className = 'slitter-row';
+        emptyExport.dataset.group = 'export';
+        emptyExport.innerHTML = '<td colspan="6" class="slitter-empty-msg">수출 데이터 없음</td>';
+        tbody.appendChild(emptyExport);
+    }
+
+    /* 합계 계산 */
+    calcSlitterSubtotals();
+}
+
+/**
+ * 중량 합계 자동 계산
  */
 function calcSlitterSubtotals() {
     var tbody = document.getElementById('slitter-tbody');
@@ -2743,23 +2819,16 @@ function calcSlitterSubtotals() {
     var domesticSum = 0;
     var exportSum = 0;
 
-    /* 모든 데이터 행 순회 */
-    var rows = tbody.querySelectorAll('tr.slitter-row');
-    rows.forEach(function (tr) {
+    var trs = tbody.querySelectorAll('tr.slitter-row');
+    trs.forEach(function (tr) {
         var group = tr.dataset.group;
-        /* 중량 셀 = .slitter-weight-cell (마지막 데이터 컬럼) */
         var weightCell = tr.querySelector('.slitter-weight-cell');
         if (!weightCell) return;
-        var val = parseFloat(weightCell.textContent) || 0;
-
-        if (group === 'domestic') {
-            domesticSum += val;
-        } else if (group === 'export') {
-            exportSum += val;
-        }
+        var val = parseFloat(weightCell.textContent.replace(/,/g, '')) || 0;
+        if (group === 'domestic') domesticSum += val;
+        else if (group === 'export') exportSum += val;
     });
 
-    /* 합계 셀 업데이트 */
     var domesticEl = document.getElementById('domestic-weight-sum');
     var exportEl = document.getElementById('export-weight-sum');
     var grandEl = document.getElementById('grand-weight-sum');
@@ -2770,18 +2839,83 @@ function calcSlitterSubtotals() {
 }
 
 /**
- * 슬리터 테이블 tbody 변경 감시 — 데이터 행 추가/변경 시 자동 재계산
+ * 서버에서 슬리터 일자별 상세 내역 로드
  */
-function initSlitterCalc() {
-    calcSlitterSubtotals();
-
-    var tbody = document.getElementById('slitter-tbody');
-    if (tbody && typeof MutationObserver !== 'undefined') {
-        var observer = new MutationObserver(function () {
-            calcSlitterSubtotals();
-        });
-        observer.observe(tbody, { childList: true, subtree: true, characterData: true });
+function loadSlitterDetail() {
+    var ym = slitterDetailState.yearMonth;
+    if (!ym) {
+        var now = new Date();
+        ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        slitterDetailState.yearMonth = ym;
     }
+
+    fetch('/api/slitter-detail/load?year_month=' + encodeURIComponent(ym))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                slitterDetailState.rows = result.data.rows || [];
+            } else {
+                slitterDetailState.rows = [];
+            }
+            renderSlitterDetailTable();
+        })
+        .catch(function (err) {
+            console.error('[슬리터 상세 로드 오류]', err);
+            slitterDetailState.rows = [];
+            renderSlitterDetailTable();
+        });
+}
+
+/**
+ * 서버에 슬리터 일자별 상세 내역 저장
+ */
+function saveSlitterDetail() {
+    var ym = slitterDetailState.yearMonth;
+    if (!ym) return;
+
+    fetch('/api/slitter-detail/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: ym,
+            rows: slitterDetailState.rows,
+            user_id: 'admin',
+        }),
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success) {
+                slitterDetailState.hasChanges = false;
+                var saveBtn = document.getElementById('btn-slitter-detail-save');
+                if (saveBtn) saveBtn.disabled = true;
+                alert('슬리터 일자별 상세 내역이 저장되었습니다.');
+            } else {
+                alert('저장 실패: ' + (result.message || ''));
+            }
+        })
+        .catch(function (err) {
+            console.error('[슬리터 상세 저장 오류]', err);
+            alert('저장 중 오류가 발생했습니다.');
+        });
+}
+
+/**
+ * 슬리터 일자별 상세 내역 초기화
+ */
+function initSlitterDetail() {
+    /* 저장 버튼 바인딩 */
+    var saveBtn = document.getElementById('btn-slitter-detail-save');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveSlitterDetail);
+    }
+
+    /* 데이터 로드 */
+    loadSlitterDetail();
+}
+
+/* initSlitterCalc — 하위 호환용 (init에서 호출됨) */
+function initSlitterCalc() {
+    initSlitterDetail();
 }
 
 /* ── 앱 시작 ── */
