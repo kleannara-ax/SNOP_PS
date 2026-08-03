@@ -2333,7 +2333,7 @@ function aggregateSubulbuWork(yearMonth) {
         var day = String(parseInt(date.substring(8, 10), 10));
         if (!dailyMap[day]) dailyMap[day] = { domestic: 0, export: 0 };
 
-        var w = Number(r.weight) || 0; // 이미 ton 단위
+        var w = (Number(r.weight) || 0) / 1000; // kg → ton
         if (r.domestic === '내수') {
             dailyMap[day].domestic += w;
         } else {

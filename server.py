@@ -1215,7 +1215,7 @@ def api_slitter_subulbu_save():
 # │  └ id          │ string   │ 행 고유 ID (UUID)                        │
 # │  └ work_date   │ string   │ 실적일자 (YYYY-MM-DD)                    │
 # │  └ domestic    │ string   │ 내수구분 (내수/수출)                      │
-# │  └ weight      │ number   │ 중량 (ton)                               │
+# │  └ weight      │ number   │ 중량 (kg)                                │
 # │ updated_at     │ string   │ 최종 수정일시 (ISO)                      │
 # │ updated_by     │ string   │ 최종 수정자                              │
 # └───────────────┴──────────┴─────────────────────────────────────────┘
