@@ -2258,8 +2258,9 @@ const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
 
 /** 수불부 상태 관리 */
 const subulbuState = {
-    yearMonth: '',      // 'YYYY-MM'
-    gimal: {},          // { "1": 100.5, "2": 80.3, ... } — ton 단위
+    yearMonth: '',              // 'YYYY-MM'
+    gimal: {},                  // { "1": 100.5, "2": 80.3, ... } — ton 단위
+    prevMonthLastGimal: 0,      // 전월 마지막 일의 기말값 (ton)
     hasChanges: false,
 };
 
@@ -2297,9 +2298,10 @@ function aggregateSlitterDaily(yearMonth) {
  * @param {number} daysInMonth — 해당 월 일수
  * @param {{ [day: string]: { domestic: number, export: number } }} dailyIF — I/F 집계
  * @param {{ [day: string]: number }} gimalInput — 기말 수기입력값 (ton)
+ * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
  */
-function calcSubulbu(daysInMonth, dailyIF, gimalInput) {
+function calcSubulbu(daysInMonth, dailyIF, gimalInput, prevMonthLastGimal) {
     var kicho = [], ipgo = [], naesu = [], suchul = [], gye = [], gimal = [];
 
     for (var d = 1; d <= daysInMonth; d++) {
@@ -2313,8 +2315,9 @@ function calcSubulbu(daysInMonth, dailyIF, gimalInput) {
         /* 계 = 내수 + 수출 */
         var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
 
-        /* 기초 = 전일 기말 (1일은 0) */
-        var kichoVal = (d === 1) ? 0 : (gimal[d - 2] || 0);
+        /* 기초 = 전일 기말 (1일은 전월 마지막일 기말값) */
+        var kichoVal = (d === 1) ? (prevMonthLastGimal || 0) : (gimal[d - 2] || 0);
+        kichoVal = Math.round(kichoVal * 10) / 10;
 
         /* 기말 = 수기입력값 */
         var gimalVal = (gimalInput[dayKey] !== undefined && gimalInput[dayKey] !== null && gimalInput[dayKey] !== '')
@@ -2375,8 +2378,8 @@ function renderSubulbuTable(year, month) {
     /* ── I/F 데이터 집계 ── */
     var dailyIF = aggregateSlitterDaily(yearMonth);
 
-    /* ── 산술 계산 ── */
-    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal);
+    /* ── 산술 계산 (전월 기말값 포함) ── */
+    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal, subulbuState.prevMonthLastGimal);
 
     /* ── 행 구조 정의 ── */
     const rowDefs = [
@@ -2462,7 +2465,7 @@ function renderSubulbuTable(year, month) {
 function recalcSubulbu(daysInMonth) {
     var yearMonth = subulbuState.yearMonth;
     var dailyIF = aggregateSlitterDaily(yearMonth);
-    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal);
+    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.gimal, subulbuState.prevMonthLastGimal);
 
     /* 자동계산 행(기초/입고/내수/수출/계) DOM 업데이트 */
     var autoRows = {
@@ -2485,20 +2488,69 @@ function recalcSubulbu(daysInMonth) {
 }
 
 /**
+ * 전월 YYYY-MM 문자열 계산
+ * @param {string} ym — 'YYYY-MM'
+ * @returns {string} 전월 'YYYY-MM'
+ */
+function getPrevYearMonth(ym) {
+    var parts = ym.split('-');
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    m -= 1;
+    if (m < 1) { m = 12; y -= 1; }
+    return y + '-' + String(m).padStart(2, '0');
+}
+
+/**
+ * 전월 마지막 일의 기말값을 가져온다.
+ * @param {object} prevData — 전월 수불부 서버 응답 data (null 가능)
+ * @returns {number} 전월 마지막 일의 기말값 (ton), 없으면 0
+ */
+function extractPrevMonthLastGimal(prevData) {
+    if (!prevData || !prevData.gimal) return 0;
+    var gimal = prevData.gimal;
+    /* gimal 객체의 키 중 가장 큰 숫자(=마지막 일) 찾기 */
+    var maxDay = 0;
+    Object.keys(gimal).forEach(function (k) {
+        var d = parseInt(k, 10);
+        if (d > maxDay && gimal[k] !== null && gimal[k] !== '' && gimal[k] !== undefined) {
+            maxDay = d;
+        }
+    });
+    return maxDay > 0 ? (Number(gimal[String(maxDay)]) || 0) : 0;
+}
+
+/**
  * 서버에서 수불부 기말 데이터 로드 후 테이블 렌더
+ * 현재 월 + 전월 데이터를 동시에 fetch하여 1일 기초값을 전월 기말에서 가져옴
  */
 function loadSubulbuData() {
     var ym = subulbuState.yearMonth;
     if (!ym) return;
 
-    fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(ym))
-        .then(function (res) { return res.json(); })
-        .then(function (result) {
-            if (result.success && result.data) {
-                subulbuState.gimal = result.data.gimal || {};
+    var prevYm = getPrevYearMonth(ym);
+
+    /* 현재 월 + 전월 데이터 동시 로드 */
+    Promise.all([
+        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(ym)).then(function (r) { return r.json(); }),
+        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm)).then(function (r) { return r.json(); })
+    ])
+        .then(function (results) {
+            var curResult = results[0];
+            var prevResult = results[1];
+
+            /* 현재 월 기말 데이터 */
+            if (curResult.success && curResult.data) {
+                subulbuState.gimal = curResult.data.gimal || {};
             } else {
                 subulbuState.gimal = {};
             }
+
+            /* 전월 마지막 일 기말값 → 1일 기초 */
+            subulbuState.prevMonthLastGimal = extractPrevMonthLastGimal(
+                (prevResult.success && prevResult.data) ? prevResult.data : null
+            );
+
             subulbuState.hasChanges = false;
             var saveBtn = document.getElementById('btn-subulbu-save');
             if (saveBtn) saveBtn.disabled = true;
@@ -2510,6 +2562,7 @@ function loadSubulbuData() {
         .catch(function (err) {
             console.error('[수불부 로드 오류]', err);
             subulbuState.gimal = {};
+            subulbuState.prevMonthLastGimal = 0;
             var parts = ym.split('-');
             renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
         });
