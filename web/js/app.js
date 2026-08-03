@@ -2623,6 +2623,7 @@ function initSubulbuMonthSelector() {
         subulbuState.yearMonth = val;
         loadSubulbuData();
     });
+
 }
 
 /* ══════════════════════════════════════════════
