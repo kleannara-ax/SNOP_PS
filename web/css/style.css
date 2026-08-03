@@ -343,7 +343,7 @@ main {
 .slitter-table th,
 .slitter-table td {
     border: none;
-    border-bottom: 1px solid #edf0f4;
+    border-bottom: 2px solid #cbd5e1;
     padding: 11px 16px;
     font-size: 0.85rem;
     text-align: center;
