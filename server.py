@@ -503,6 +503,9 @@ SLITTER_DETAIL_FILE = os.path.join(DATA_DIR, 'slitter_detail.json')
 # ─── 슬리터 외주 진행 내역 데이터 파일 ───
 SLITTER_OUTSOURCE_FILE = os.path.join(DATA_DIR, 'slitter_outsource.json')
 
+# ─── 슬리터 수불부 데이터 파일 (기말 수기입력값 저장) ───
+SLITTER_SUBULBU_FILE = os.path.join(DATA_DIR, 'slitter_subulbu.json')
+
 
 def load_json_file(filepath, default=None):
     """JSON 파일 로드 — 없거나 파싱 실패 시 default 반환"""
@@ -1124,6 +1127,73 @@ def api_slitter_outsource_save():
     return jsonify({
         'success': True,
         'message': f'{ym} 슬리터 외주 진행 내역 저장 완료',
+        'data': all_data[ym],
+    })
+
+
+# ═══════════════════════════════════════════════
+# 슬리터 수불부 API (기말 수기입력값 저장/로드)
+# ═══════════════════════════════════════════════
+# DB 스키마 (JSON 기반):
+# ┌─────────────────────────────────────────────────────────────────┐
+# │ 테이블명: slitter_subulbu                                       │
+# ├───────────────┬──────────┬────────────────────────────────────┤
+# │ 필드명         │ 타입      │ 설명                               │
+# ├───────────────┼──────────┼────────────────────────────────────┤
+# │ year_month     │ string   │ 대상 월 (YYYY-MM), PK 역할         │
+# │ gimal          │ object   │ 일자별 기말값 { "1": 100, ... }     │
+# │ updated_at     │ string   │ 최종 수정일시 (ISO)                 │
+# │ updated_by     │ string   │ 최종 수정자                         │
+# └───────────────┴──────────┴────────────────────────────────────┘
+#
+# 산술 로직:
+# - 기초: 전일 기말값 (1일 기초 = 0)
+# - 입고: 기말 + 계 - 기초 (역산)
+# - 내수/수출(작업): I/F 데이터 (slitter_detail)에서 일자별 집계
+# - 계: 내수 + 수출
+# - 기말: 수기입력 (이 테이블에 저장)
+
+
+@app.route('/api/slitter-subulbu/load', methods=['GET'])
+def api_slitter_subulbu_load():
+    """슬리터 수불부 기말 데이터 로드 — year_month 파라미터 필수"""
+    ym = request.args.get('year_month', '').strip()
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 파라미터 필요'}), 400
+
+    all_data = load_json_file(SLITTER_SUBULBU_FILE, {})
+    record = all_data.get(ym, None)
+    if record is None:
+        return jsonify({'success': True, 'data': None, 'message': '데이터 없음'})
+    return jsonify({'success': True, 'data': record})
+
+
+@app.route('/api/slitter-subulbu/save', methods=['POST'])
+def api_slitter_subulbu_save():
+    """슬리터 수불부 기말 데이터 저장"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    ym = body.get('year_month', '').strip()
+    gimal = body.get('gimal', {})
+    user_id = body.get('user_id', 'system')
+
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 필요'}), 400
+
+    all_data = load_json_file(SLITTER_SUBULBU_FILE, {})
+    all_data[ym] = {
+        'year_month': ym,
+        'gimal': gimal,
+        'updated_at': datetime.now().isoformat(),
+        'updated_by': user_id,
+    }
+    save_json_file(SLITTER_SUBULBU_FILE, all_data)
+
+    return jsonify({
+        'success': True,
+        'message': f'{ym} 슬리터 수불부 저장 완료',
         'data': all_data[ym],
     })
 
