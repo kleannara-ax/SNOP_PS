@@ -440,6 +440,9 @@ function init() {
     /* 슬리터 수불부 월 선택기 초기화 */
     initSubulbuMonthSelector();
 
+    /* 슬리터 일자별 상세내역 중량 합계 계산 초기화 */
+    initSlitterCalc();
+
     /* 슬리터 외주 진행 내역 초기화 */
     initOutsource();
 
@@ -2240,11 +2243,156 @@ function getHistoryStatusBadge(status) {
 }
 
 /* ══════════════════════════════════════════════
-   슬리터 수불부 — 동적 날짜 컬럼 생성
+   슬리터 수불부 — 산술 로직 + 동적 날짜 컬럼
+   ══════════════════════════════════════════════
+   산술 로직:
+     1) 기초  = 전일 기말 (1일 기초 = 0)
+     2) 입고  = 기말 + 계 - 기초
+     3) 내수/수출(작업) = I/F 데이터 (slitter_detail) 일자별 집계
+     4) 계   = 내수 + 수출
+     5) 기말  = 수기 입력 (서버 저장)
    ══════════════════════════════════════════════ */
 
 /** 요일 한글 배열 */
 const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** 수불부 상태 관리 */
+const subulbuState = {
+    yearMonth: '',              // 'YYYY-MM'
+    prevMonthLastGimal: 0,      // 전월 마지막 일의 기말값 (ton)
+    workRows: [],               // 작업(I/F) 데이터 rows [{work_date, domestic, weight}, ...]
+};
+
+/**
+ * 슬리터 상세 데이터에서 일자별 내수/수출 중량 집계 (ton 단위)
+ * ※ 이 함수는 차트(renderSlitterDailyChart, renderSlitterSubulbuChart)에서만 사용
+ * @param {string} yearMonth  — 'YYYY-MM'
+ * @returns {{ [day: string]: { domestic: number, export: number } }}
+ */
+function aggregateSlitterDaily(yearMonth) {
+    var rows = slitterDetailState.rows || [];
+    var dailyMap = {};
+
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        /* 해당 월 데이터만 필터링 */
+        if (date.substring(0, 7) !== yearMonth) return;
+
+        var day = String(parseInt(date.substring(8, 10), 10)); // "01" → "1"
+        if (!dailyMap[day]) dailyMap[day] = { domestic: 0, export: 0 };
+
+        var w = (Number(r.weight) || 0) / 1000; // kg → ton
+        if (r.domestic === '내수') {
+            dailyMap[day].domestic += w;
+        } else {
+            dailyMap[day].export += w;
+        }
+    });
+
+    return dailyMap;
+}
+
+/**
+ * 슬리터 상세 데이터에서 일자별 총합계 집계 (ton 단위)
+ * → 당일 총합계 = 수불부 기말 값
+ * @param {string} yearMonth  — 'YYYY-MM'
+ * @returns {{ [day: string]: number }} — 일자별 총합계 (ton)
+ */
+function aggregateSlitterDailyTotal(yearMonth) {
+    var rows = slitterDetailState.rows || [];
+    var dailyTotalMap = {};
+
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (date.substring(0, 7) !== yearMonth) return;
+
+        var day = String(parseInt(date.substring(8, 10), 10));
+        if (!dailyTotalMap[day]) dailyTotalMap[day] = 0;
+        dailyTotalMap[day] += (Number(r.weight) || 0) / 1000; // kg → ton
+    });
+
+    return dailyTotalMap;
+}
+
+/**
+ * 수불부 작업(I/F) 데이터에서 일자별 내수/수출 집계 (ton 단위)
+ * @param {string} yearMonth — 'YYYY-MM'
+ * @returns {{ [day: string]: { domestic: number, export: number } }}
+ */
+function aggregateSubulbuWork(yearMonth) {
+    var rows = subulbuState.workRows || [];
+    var dailyMap = {};
+
+    rows.forEach(function (r) {
+        var date = r.work_date || '';
+        if (!date) return;
+        if (date.substring(0, 7) !== yearMonth) return;
+
+        var day = String(parseInt(date.substring(8, 10), 10));
+        if (!dailyMap[day]) dailyMap[day] = { domestic: 0, export: 0 };
+
+        var w = (Number(r.weight) || 0) / 1000; // kg → ton
+        if (r.domestic === '내수') {
+            dailyMap[day].domestic += w;
+        } else {
+            dailyMap[day].export += w;
+        }
+    });
+
+    return dailyMap;
+}
+
+/**
+ * 수불부 산술 계산
+ * ─────────────────────────────────────────────
+ * 기말 = 일자별 상세 내역의 "당일" 총합계 (ton)
+ * 기초 = 전일 기말 (1일은 전월 마지막일 기말값)
+ * 내수/수출(작업) = 수불부 작업(I/F) 테이블에서 집계
+ * 계 = 내수 + 수출
+ * 입고 = 기말 + 계 - 기초
+ * ─────────────────────────────────────────────
+ * @param {number} daysInMonth — 해당 월 일수
+ * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 당일 총합계 (ton)
+ * @param {{ [day: string]: { domestic: number, export: number } }} dailyWork — 작업(I/F) 일자별 집계
+ * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
+ * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
+ */
+function calcSubulbu(daysInMonth, dailyTotal, dailyWork, prevMonthLastGimal) {
+    var kicho = [], ipgo = [], naesu = [], suchul = [], gye = [], gimal = [];
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dayKey = String(d);
+
+        /* 기말 = 당일 상세내역 총합계 */
+        var gimalVal = Math.round((dailyTotal[dayKey] || 0) * 10) / 10;
+
+        /* 기초 = 전일 기말 (1일은 전월 마지막일 기말값) */
+        var kichoVal = (d === 1) ? (prevMonthLastGimal || 0) : (gimal[d - 2] || 0);
+        kichoVal = Math.round(kichoVal * 10) / 10;
+
+        /* 내수/수출(작업) = 수불부 작업 I/F 테이블 */
+        var workData = dailyWork[dayKey] || { domestic: 0, export: 0 };
+        var naesuVal = Math.round(workData.domestic * 10) / 10;
+        var suchulVal = Math.round(workData.export * 10) / 10;
+
+        /* 계 = 내수 + 수출 */
+        var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
+
+        /* 입고 = 기말 + 계 - 기초 */
+        var ipgoVal = Math.round((gimalVal + gyeVal - kichoVal) * 10) / 10;
+
+        kicho.push(kichoVal);
+        ipgo.push(ipgoVal);
+        naesu.push(naesuVal);
+        suchul.push(suchulVal);
+        gye.push(gyeVal);
+        gimal.push(gimalVal);
+    }
+
+    return { kicho: kicho, ipgo: ipgo, naesu: naesu, suchul: suchul, gye: gye, gimal: gimal };
+}
 
 /**
  * 선택된 월의 수불부 테이블을 렌더링한다.
@@ -2256,20 +2404,20 @@ function renderSubulbuTable(year, month) {
     const tbody = document.getElementById('subulbu-tbody');
     if (!headerRow || !tbody) return;
 
-    /* 해당 월의 마지막 날 구하기 */
-    const daysInMonth = new Date(year, month, 0).getDate();
+    var yearMonth = year + '-' + String(month).padStart(2, '0');
+    var daysInMonth = new Date(year, month, 0).getDate();
 
     /* ── 헤더 재구성 ── */
     headerRow.innerHTML = '';
     const thLabel = document.createElement('th');
     thLabel.className = 'subulbu-th-label';
     thLabel.colSpan = 2;
-    thLabel.textContent = '일자';
+    thLabel.textContent = month + '월';
     headerRow.appendChild(thLabel);
 
     for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, month - 1, d);
-        const dayIdx = dateObj.getDay(); // 0=일, 6=토
+        const dayIdx = dateObj.getDay();
         const dayName = DAY_NAMES_KR[dayIdx];
 
         let weekendClass = '';
@@ -2282,37 +2430,38 @@ function renderSubulbuTable(year, month) {
         headerRow.appendChild(th);
     }
 
-    /* ── 행 구조 정의 ──
-       colspan: true → 라벨이 2열을 차지 (기초/입고/계/기말)
-       rowspan: true → 라벨이 2행을 차지 (작업)
-       sub: 서브라벨 텍스트 (내수/수출)
-       skipLabel: true → rowspan에 의해 이전 행이 차지하므로 라벨 생략 */
-    const rows = [
-        { key: 'kicho',       label: '기초',  colspan: true  },
-        { key: 'ipgo',        label: '입고',  colspan: true  },
-        { key: 'work-naesu',  label: '작업',  rowspan: true, sub: '내수' },
-        { key: 'work-suchul', skipLabel: true, sub: '수출' },
-        { key: 'gye',         label: '계',    colspan: true  },
-        { key: 'gimal',       label: '기말',  colspan: true  },
+    /* ── 일자별 상세내역 당일 총합계 집계 (기말 용) ── */
+    var dailyTotal = aggregateSlitterDailyTotal(yearMonth);
+
+    /* ── 작업(I/F) 일자별 내수/수출 집계 ── */
+    var dailyWork = aggregateSubulbuWork(yearMonth);
+
+    /* ── 산술 계산 (전월 기말값 포함) ── */
+    var calc = calcSubulbu(daysInMonth, dailyTotal, dailyWork, subulbuState.prevMonthLastGimal);
+
+    /* ── 행 구조 정의 (기말 포함 전체 자동계산) ── */
+    const rowDefs = [
+        { key: 'kicho',       label: '기초',  colspan: true,  data: calc.kicho,  cssClass: 'subulbu-row-kicho'  },
+        { key: 'ipgo',        label: '입고',  colspan: true,  data: calc.ipgo,   cssClass: 'subulbu-row-ipgo'   },
+        { key: 'work-naesu',  label: '작업',  rowspan: true,  sub: '내수', data: calc.naesu,  cssClass: 'subulbu-row-work-naesu'  },
+        { key: 'work-suchul', skipLabel: true, sub: '수출', data: calc.suchul, cssClass: 'subulbu-row-work-suchul' },
+        { key: 'gye',         label: '계',    colspan: true,  data: calc.gye,    cssClass: 'subulbu-row-gye'    },
+        { key: 'gimal',       label: '기말',  colspan: true,  data: calc.gimal,  cssClass: 'subulbu-row-gimal'  },
     ];
 
     tbody.innerHTML = '';
 
-    rows.forEach((rowDef) => {
+    rowDefs.forEach(function (rowDef) {
         const tr = document.createElement('tr');
-        tr.className = 'subulbu-row subulbu-row-' + rowDef.key;
+        tr.className = 'subulbu-row ' + rowDef.cssClass;
 
         /* 좌측 라벨 셀 */
         if (rowDef.label) {
             const tdLabel = document.createElement('td');
             tdLabel.className = rowDef.rowspan ? 'subulbu-label subulbu-label-work' : 'subulbu-label';
             tdLabel.textContent = rowDef.label;
-            if (rowDef.rowspan) {
-                tdLabel.rowSpan = 2;
-            }
-            if (rowDef.colspan) {
-                tdLabel.colSpan = 2;
-            }
+            if (rowDef.rowspan) tdLabel.rowSpan = 2;
+            if (rowDef.colspan) tdLabel.colSpan = 2;
             tr.appendChild(tdLabel);
         }
 
@@ -2324,16 +2473,130 @@ function renderSubulbuTable(year, month) {
             tr.appendChild(tdSub);
         }
 
-        /* 날짜 데이터 셀 */
+        /* 날짜 데이터 셀 (전체 자동계산 — 수기입력 없음) */
         for (let d = 0; d < daysInMonth; d++) {
+            const val = rowDef.data[d] || 0;
             const td = document.createElement('td');
             td.className = 'subulbu-data';
-            td.textContent = '';
+            td.textContent = val ? val.toFixed(1) : '';
             tr.appendChild(td);
         }
 
         tbody.appendChild(tr);
     });
+
+    /* ── 기말 누적합을 서버에 자동저장 (다음달 1일 기초값 용) ── */
+    autoSaveSubulbuGimal(yearMonth, calc.gimal, daysInMonth);
+}
+
+/**
+ * 기말 누적합을 서버에 자동저장 (백그라운드, UI 알림 없음)
+ * 다음 달의 1일 기초값으로 사용됨
+ * @param {string} yearMonth — 'YYYY-MM'
+ * @param {number[]} gimalArr — 일자별 기말값 배열
+ * @param {number} daysInMonth — 해당 월 일수
+ */
+function autoSaveSubulbuGimal(yearMonth, gimalArr, daysInMonth) {
+    /* 기말 배열을 { "1": val, "2": val, ... } 객체로 변환 */
+    var gimalObj = {};
+    var hasData = false;
+    for (var d = 0; d < daysInMonth; d++) {
+        if (gimalArr[d]) {
+            gimalObj[String(d + 1)] = gimalArr[d];
+            hasData = true;
+        }
+    }
+    if (!hasData) return; /* 데이터 없으면 저장 안 함 */
+
+    fetch('/api/slitter-subulbu/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: yearMonth,
+            gimal: gimalObj,
+            user_id: 'system',
+        }),
+    }).catch(function (err) {
+        console.error('[수불부 기말 자동저장 오류]', err);
+    });
+}
+
+/**
+ * 전월 YYYY-MM 문자열 계산
+ * @param {string} ym — 'YYYY-MM'
+ * @returns {string} 전월 'YYYY-MM'
+ */
+function getPrevYearMonth(ym) {
+    var parts = ym.split('-');
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    m -= 1;
+    if (m < 1) { m = 12; y -= 1; }
+    return y + '-' + String(m).padStart(2, '0');
+}
+
+/**
+ * 전월 마지막 일의 기말값을 가져온다.
+ * @param {object} prevData — 전월 수불부 서버 응답 data (null 가능)
+ * @returns {number} 전월 마지막 일의 기말값 (ton), 없으면 0
+ */
+function extractPrevMonthLastGimal(prevData) {
+    if (!prevData || !prevData.gimal) return 0;
+    var gimal = prevData.gimal;
+    /* gimal 객체의 키 중 가장 큰 숫자(=마지막 일) 찾기 */
+    var maxDay = 0;
+    Object.keys(gimal).forEach(function (k) {
+        var d = parseInt(k, 10);
+        if (d > maxDay && gimal[k] !== null && gimal[k] !== '' && gimal[k] !== undefined) {
+            maxDay = d;
+        }
+    });
+    return maxDay > 0 ? (Number(gimal[String(maxDay)]) || 0) : 0;
+}
+
+/**
+ * 수불부 데이터 로드 후 테이블 렌더
+ * 1) 전월 기말값 (1일 기초용)
+ * 2) 작업(I/F) 데이터 (내수/수출)
+ */
+function loadSubulbuData() {
+    var ym = subulbuState.yearMonth;
+    if (!ym) return;
+
+    var prevYm = getPrevYearMonth(ym);
+
+    /* 전월 기말 + 작업(I/F) 데이터 동시 로드 */
+    Promise.all([
+        fetch('/api/slitter-subulbu/load?year_month=' + encodeURIComponent(prevYm)).then(function (r) { return r.json(); }),
+        fetch('/api/slitter-subulbu-work/load?year_month=' + encodeURIComponent(ym)).then(function (r) { return r.json(); })
+    ])
+        .then(function (results) {
+            var prevResult = results[0];
+            var workResult = results[1];
+
+            /* 전월 마지막 일 기말값 → 1일 기초 */
+            subulbuState.prevMonthLastGimal = extractPrevMonthLastGimal(
+                (prevResult.success && prevResult.data) ? prevResult.data : null
+            );
+
+            /* 작업(I/F) 데이터 */
+            if (workResult.success && workResult.data) {
+                subulbuState.workRows = workResult.data.rows || [];
+            } else {
+                subulbuState.workRows = [];
+            }
+
+            /* 렌더링 */
+            var parts = ym.split('-');
+            renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
+        })
+        .catch(function (err) {
+            console.error('[수불부 로드 오류]', err);
+            subulbuState.prevMonthLastGimal = 0;
+            subulbuState.workRows = [];
+            var parts = ym.split('-');
+            renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
+        });
 }
 
 /**
@@ -2348,19 +2611,19 @@ function initSubulbuMonthSelector() {
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     monthInput.value = yyyy + '-' + mm;
+    subulbuState.yearMonth = yyyy + '-' + mm;
 
-    /* 초기 렌더 */
-    renderSubulbuTable(yyyy, now.getMonth() + 1);
+    /* 초기 로드 */
+    loadSubulbuData();
 
-    /* 월 변경 시 다시 렌더 */
+    /* 월 변경 시 다시 로드 */
     monthInput.addEventListener('change', function () {
-        const val = this.value; // "YYYY-MM"
+        const val = this.value;
         if (!val) return;
-        const parts = val.split('-');
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        renderSubulbuTable(y, m);
+        subulbuState.yearMonth = val;
+        loadSubulbuData();
     });
+
 }
 
 /* ══════════════════════════════════════════════
@@ -2405,13 +2668,14 @@ function renderOutsourceTable(year, month) {
     for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(year, month - 1, d);
         const dayIdx = dateObj.getDay();
+        const dayName = DAY_NAMES_KR[dayIdx];
         let cls = 'outsource-date-th';
         if (dayIdx === 0) cls += ' outsource-sun';
         else if (dayIdx === 6) cls += ' outsource-sat';
 
         const th = document.createElement('th');
         th.className = cls;
-        th.textContent = d + '일';
+        th.innerHTML = d + '일<span class="outsource-date-day">(' + dayName + ')</span>';
         headerRow.appendChild(th);
     }
 
@@ -2724,6 +2988,641 @@ function initOutsource() {
     if (saveBtn) {
         saveBtn.addEventListener('click', saveOutsourceData);
     }
+}
+
+/* ══════════════════════════════════════════════
+   슬리터 일자별 상세 내역 — 데이터 관리
+   ══════════════════════════════════════════════ */
+var slitterDetailState = {
+    yearMonth: '',
+    rows: [],
+    hasChanges: false,
+};
+
+/**
+ * 슬리터 일자별 상세 내역 — VLOOKUP 계층적 병합 테이블
+ * 내수구분(rowspan) → 지종코드(rowspan) → 평량(rowspan) → 가로길이 → 중량 SUM
+ */
+function renderSlitterDetailTable() {
+    var tbody = document.getElementById('slitter-tbody');
+    var tfoot = document.getElementById('slitter-tfoot');
+    if (!tbody) return;
+
+    var rows = slitterDetailState.rows || [];
+    tbody.innerHTML = '';
+    if (tfoot) tfoot.innerHTML = '';
+
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="slitter-empty-msg">데이터 없음</td></tr>';
+        return;
+    }
+
+    /* ── 1) VLOOKUP 그룹핑: (domestic, paper_code, basis_weight, width) → SUM(weight) ── */
+    var groupMap = {};
+    rows.forEach(function (r) {
+        var key = r.domestic + '|' + r.paper_code + '|' + r.basis_weight + '|' + r.width;
+        if (!groupMap[key]) {
+            groupMap[key] = {
+                domestic: r.domestic,
+                paper_code: r.paper_code,
+                basis_weight: r.basis_weight,
+                width: r.width,
+                weight: 0,
+            };
+        }
+        groupMap[key].weight += (Number(r.weight) || 0);
+    });
+
+    /* 정렬: 내수→수출, 지종코드, 평량, 가로길이 */
+    var grouped = Object.values(groupMap);
+    grouped.sort(function (a, b) {
+        var dOrder = { '내수': 0, '수출': 1 };
+        var da = dOrder[a.domestic] != null ? dOrder[a.domestic] : 2;
+        var db = dOrder[b.domestic] != null ? dOrder[b.domestic] : 2;
+        if (da !== db) return da - db;
+        if (a.paper_code !== b.paper_code) return a.paper_code < b.paper_code ? -1 : 1;
+        if (a.basis_weight !== b.basis_weight) return a.basis_weight - b.basis_weight;
+        return a.width - b.width;
+    });
+
+    /* ── 2) 계층적 rowspan 계산 ── */
+    /* domestic → 해당 domestic의 전체 행 수 */
+    function countByDomestic(items, dom) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) { if (items[i].domestic === dom) n++; }
+        return n;
+    }
+    /* domestic+paper_code → 해당 조합의 행 수 */
+    function countByCode(items, dom, code) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].domestic === dom && items[i].paper_code === code) n++;
+        }
+        return n;
+    }
+    /* domestic+paper_code+basis_weight → 해당 조합의 행 수 */
+    function countByBW(items, dom, code, bw) {
+        var n = 0;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].domestic === dom && items[i].paper_code === code && items[i].basis_weight === bw) n++;
+        }
+        return n;
+    }
+
+    /* ── 3) 그룹별 렌더링 ── */
+    var domesticItems = grouped.filter(function (g) { return g.domestic === '내수'; });
+    var exportItems = grouped.filter(function (g) { return g.domestic === '수출'; });
+
+    function renderGroup(items, groupLabel, groupClass) {
+        var groupSum = 0;
+        var prevCode = null;
+        var prevBW = null;
+
+        items.forEach(function (item, idx) {
+            var tr = document.createElement('tr');
+            tr.className = 'slitter-row slitter-group-' + groupClass;
+
+            /* 그룹 경계 클래스: 다음 행과 비교하여 마지막 행에 추가 */
+            var next = items[idx + 1] || null;
+            if (!next || next.paper_code !== item.paper_code) {
+                tr.className += ' slitter-code-last';   /* 지종코드 그룹 마지막 행 */
+            } else if (next.basis_weight !== item.basis_weight) {
+                tr.className += ' slitter-bw-last';     /* 평량 그룹 마지막 행 */
+            }
+
+            var html = '';
+
+            /* ① 내수구분 — 그룹 첫 행에만 rowspan */
+            if (idx === 0) {
+                var domSpan = items.length;
+                html += '<td class="slitter-merge-cell slitter-domestic-cell slitter-domestic-' + groupClass + '" rowspan="' + domSpan + '">' + groupLabel + '</td>';
+            }
+
+            /* ② 지종코드 — 같은 코드 첫 등장 시 rowspan */
+            var isNewCode = (item.paper_code !== prevCode);
+            if (isNewCode) {
+                var codeSpan = countByCode(items, item.domestic, item.paper_code);
+                html += '<td class="slitter-merge-cell slitter-code-cell" rowspan="' + codeSpan + '">' + (item.paper_code || '') + '</td>';
+                prevCode = item.paper_code;
+                prevBW = null;          /* 코드 변경 시 평량도 리셋 */
+            }
+
+            /* ③ 평량 — 같은 코드+평량 첫 등장 시 rowspan */
+            var isNewBW = (item.basis_weight !== prevBW) || isNewCode;
+            if (isNewBW) {
+                var bwSpan = countByBW(items, item.domestic, item.paper_code, item.basis_weight);
+                html += '<td class="slitter-merge-cell slitter-bw-cell" rowspan="' + bwSpan + '">' +
+                    (item.basis_weight != null ? Number(item.basis_weight).toLocaleString() : '') + '</td>';
+                prevBW = item.basis_weight;
+            }
+
+            /* ④ 가로길이 — 항상 표시 */
+            html += '<td>' + (item.width != null ? Number(item.width).toLocaleString() : '') + '</td>';
+
+            /* ⑤ 중량(합계, ton) — kg→÷1000 */
+            var tonVal = item.weight ? (item.weight / 1000) : 0;
+            html += '<td class="slitter-weight-cell">' + tonVal.toFixed(1) + '</td>';
+
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+            groupSum += item.weight;
+        });
+
+        /* 그룹 소계 행 */
+        if (items.length > 0) {
+            var subTr = document.createElement('tr');
+            subTr.className = 'slitter-subtotal-row slitter-subtotal-' + groupClass;
+            subTr.innerHTML =
+                '<td class="subtotal-label" colspan="4">' + groupLabel + ' 합계</td>' +
+                '<td class="subtotal-value">' + (groupSum / 1000).toFixed(1) + '</td>';
+            tbody.appendChild(subTr);
+        }
+
+        return groupSum;
+    }
+
+    /* ── 4) 내수 렌더링 ── */
+    var domesticTotal = 0;
+    if (domesticItems.length > 0) {
+        domesticTotal = renderGroup(domesticItems, '내수', 'domestic');
+    } else {
+        tbody.innerHTML += '<tr class="slitter-row"><td colspan="5" class="slitter-empty-msg">내수 데이터 없음</td></tr>';
+    }
+
+    /* ── 5) 수출 렌더링 ── */
+    var exportTotal = 0;
+    if (exportItems.length > 0) {
+        exportTotal = renderGroup(exportItems, '수출', 'export');
+    } else {
+        var emptyTr = document.createElement('tr');
+        emptyTr.className = 'slitter-row';
+        emptyTr.innerHTML = '<td colspan="5" class="slitter-empty-msg">수출 데이터 없음</td>';
+        tbody.appendChild(emptyTr);
+    }
+
+    /* ── 6) tfoot: 총 합계 ── */
+    if (tfoot) {
+        var grandTotal = domesticTotal + exportTotal;
+        tfoot.innerHTML =
+            '<tr class="slitter-grandtotal-row">' +
+                '<td class="grandtotal-label" colspan="4">총 합계</td>' +
+                '<td class="grandtotal-value">' + (grandTotal / 1000).toFixed(1) + '</td>' +
+            '</tr>';
+    }
+
+    /* ── 7) 분석 텍스트 갱신 ── */
+    slitterDetailState.domesticTon = domesticTotal / 1000;
+    slitterDetailState.exportTon = exportTotal / 1000;
+    updateSlitterAnalysis();
+    renderSlitterDailyChart();
+    renderSlitterSubulbuChart();
+
+    /* 수불부 테이블도 I/F 데이터 변경 반영 */
+    if (subulbuState.yearMonth) {
+        var sbParts = subulbuState.yearMonth.split('-');
+        renderSubulbuTable(parseInt(sbParts[0], 10), parseInt(sbParts[1], 10));
+    }
+}
+
+/**
+ * 슬리터 분석 텍스트 갱신
+ * 내수/수출 합계(ton) ÷ 일재단량(ton) = 소요일수
+ */
+function updateSlitterAnalysis() {
+    var resultEl = document.getElementById('slitter-analysis-result');
+    if (!resultEl) return;
+
+    var input = document.getElementById('slitter-daily-cut');
+    var dailyCut = input ? parseFloat(input.value) : 0;
+    var domTon = slitterDetailState.domesticTon || 0;
+    var expTon = slitterDetailState.exportTon || 0;
+
+    if (!dailyCut || dailyCut <= 0 || (domTon === 0 && expTon === 0)) {
+        resultEl.textContent = '—';
+        return;
+    }
+
+    var expDays = Math.ceil(expTon / dailyCut);
+    var domDays = Math.ceil(domTon / dailyCut);
+
+    resultEl.innerHTML =
+        '수출 <strong>' + expDays + '일</strong> 소요, ' +
+        '내수 <strong>' + domDays + '일</strong> 소요';
+}
+
+/**
+ * 슬리터 일자별 내수/수출 꺾은선 차트
+ */
+var slitterDailyChartInstance = null;
+
+function renderSlitterDailyChart() {
+    var canvas = document.getElementById('slitter-daily-chart');
+    if (!canvas) return;
+
+    var rows = slitterDetailState.rows || [];
+
+    /* ── 일자별 내수/수출 합계 (ton) ── */
+    var dailyMap = {};
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        if (r.domestic === '내수') {
+            dailyMap[date].domestic += (Number(r.weight) || 0);
+        } else {
+            dailyMap[date].export += (Number(r.weight) || 0);
+        }
+    });
+
+    var dates = Object.keys(dailyMap).sort();
+    /* 일자 라벨: "7/4", "7/10" 형태 */
+    var labels = dates.map(function (d) {
+        var parts = d.split('-');
+        return Number(parts[1]) + '/' + Number(parts[2]);
+    });
+    var domesticData = dates.map(function (d) {
+        return Math.round(dailyMap[d].domestic / 100) / 10;  /* ton, 소수 1자리 */
+    });
+    var exportData = dates.map(function (d) {
+        return Math.round(dailyMap[d].export / 100) / 10;
+    });
+
+    /* 기존 차트 파기 */
+    if (slitterDailyChartInstance) {
+        slitterDailyChartInstance.destroy();
+        slitterDailyChartInstance = null;
+    }
+
+    if (dates.length === 0) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    slitterDailyChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '수출',
+                    data: exportData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ef4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true,
+                },
+                {
+                    label: '내수',
+                    data: domesticData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        borderRadius: 3,
+                        useBorderRadius: true,
+                        padding: 16,
+                        font: { family: "'Noto Sans KR', sans-serif", size: 12, weight: '600' },
+                        color: '#475569',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    bodyFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { color: '#e2e8f0' },
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                        callback: function (v) { return v + 't'; },
+                    },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * 슬리터 수불부 추이 차트
+ * 일자별 입고 / 출고(내수+수출) / 누적재고 추이
+ */
+var slitterSubulbuChartInstance = null;
+
+function renderSlitterSubulbuChart() {
+    var canvas = document.getElementById('slitter-subulbu-chart');
+    if (!canvas) return;
+
+    var rows = slitterDetailState.rows || [];
+
+    /* ── 일자별 출고량 집계 (ton) ── */
+    var dailyMap = {};
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        if (r.domestic === '내수') {
+            dailyMap[date].domestic += (Number(r.weight) || 0);
+        } else {
+            dailyMap[date].export += (Number(r.weight) || 0);
+        }
+    });
+
+    var dates = Object.keys(dailyMap).sort();
+
+    /* 기존 차트 파기 */
+    if (slitterSubulbuChartInstance) {
+        slitterSubulbuChartInstance.destroy();
+        slitterSubulbuChartInstance = null;
+    }
+
+    if (dates.length === 0) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    var labels = dates.map(function (d) {
+        var parts = d.split('-');
+        return Number(parts[1]) + '/' + Number(parts[2]);
+    });
+
+    /* 일자별 출고(작업) = 내수 + 수출 */
+    var shipOutData = dates.map(function (d) {
+        return Math.round((dailyMap[d].domestic + dailyMap[d].export) / 100) / 10;
+    });
+
+    /* 누적 출고량 */
+    var cumulative = [];
+    var runningTotal = 0;
+    dates.forEach(function (d) {
+        runningTotal += (dailyMap[d].domestic + dailyMap[d].export) / 1000;
+        cumulative.push(Math.round(runningTotal * 10) / 10);
+    });
+
+    slitterSubulbuChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '일 출고량',
+                    data: shipOutData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 2,
+                    yAxisID: 'y',
+                },
+                {
+                    label: '누적 출고',
+                    data: cumulative,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    order: 1,
+                    yAxisID: 'y1',
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        borderRadius: 3,
+                        useBorderRadius: true,
+                        padding: 16,
+                        font: { family: "'Noto Sans KR', sans-serif", size: 12, weight: '600' },
+                        color: '#475569',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    bodyFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { color: '#e2e8f0' },
+                },
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '일 출고(ton)',
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#10b981',
+                    },
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { display: false },
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: '누적(ton)',
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#f59e0b',
+                    },
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * 서버에서 슬리터 일자별 상세 내역 로드
+ */
+function loadSlitterDetail() {
+    var ym = slitterDetailState.yearMonth;
+    if (!ym) {
+        var now = new Date();
+        ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        slitterDetailState.yearMonth = ym;
+    }
+
+    fetch('/api/slitter-detail/load?year_month=' + encodeURIComponent(ym))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                slitterDetailState.rows = result.data.rows || [];
+            } else {
+                slitterDetailState.rows = [];
+            }
+            renderSlitterDetailTable();
+        })
+        .catch(function (err) {
+            console.error('[슬리터 상세 로드 오류]', err);
+            slitterDetailState.rows = [];
+            renderSlitterDetailTable();
+        });
+}
+
+/**
+ * 서버에 슬리터 일자별 상세 내역 저장
+ */
+function saveSlitterDetail() {
+    var ym = slitterDetailState.yearMonth;
+    if (!ym) return;
+
+    fetch('/api/slitter-detail/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: ym,
+            rows: slitterDetailState.rows,
+            user_id: 'admin',
+        }),
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success) {
+                slitterDetailState.hasChanges = false;
+                var saveBtn = document.getElementById('btn-slitter-detail-save');
+                if (saveBtn) saveBtn.disabled = true;
+                alert('슬리터 일자별 상세 내역이 저장되었습니다.');
+            } else {
+                alert('저장 실패: ' + (result.message || ''));
+            }
+        })
+        .catch(function (err) {
+            console.error('[슬리터 상세 저장 오류]', err);
+            alert('저장 중 오류가 발생했습니다.');
+        });
+}
+
+/**
+ * 슬리터 일자별 상세 내역 초기화
+ */
+function initSlitterDetail() {
+    /* 월 선택기 초기값 = 시스템 현재 월 */
+    var monthInput = document.getElementById('slitter-detail-month');
+    if (monthInput) {
+        var now = new Date();
+        var currentYM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = currentYM;
+        slitterDetailState.yearMonth = currentYM;
+
+        /* 월 변경 이벤트 */
+        monthInput.addEventListener('change', function () {
+            var val = this.value;
+            if (!val) return;
+            slitterDetailState.yearMonth = val;
+            loadSlitterDetail();
+        });
+    }
+
+    /* 일 재단량 입력 이벤트 */
+    var dailyCutInput = document.getElementById('slitter-daily-cut');
+    if (dailyCutInput) {
+        dailyCutInput.addEventListener('input', updateSlitterAnalysis);
+    }
+
+    /* 저장 버튼 바인딩 */
+    var saveBtn = document.getElementById('btn-slitter-detail-save');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveSlitterDetail);
+    }
+
+    /* 데이터 로드 */
+    loadSlitterDetail();
+}
+
+/* initSlitterCalc — 하위 호환용 (init에서 호출됨) */
+function initSlitterCalc() {
+    initSlitterDetail();
 }
 
 /* ── 앱 시작 ── */

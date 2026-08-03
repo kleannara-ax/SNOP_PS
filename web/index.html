@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260730d">
+    <link rel="stylesheet" href="css/style.css?v=20260803p">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -776,79 +776,76 @@
         <div class="table-sub-section" data-table-panel="slitter">
             <div class="section-header planner-header">
                 <div>
-                    <h2>슬리터 일자별 상세 내역</h2>
+                    <h2>슬리터 현황</h2>
                     <p><span id="slitter-date-desc"></span> 슬리터대기현황입니다.</p>
                 </div>
             </div>
 
-            <!-- 슬리터 테이블 카드 -->
-            <div class="slitter-card">
-                <div class="slitter-card-header">
-                    <span></span>
-                    <button class="primary small" id="btn-slitter-export" disabled>엑셀 다운로드</button>
+            <!-- 슬리터 상세내역 2컬럼 레이아웃 -->
+            <div class="slitter-detail-grid">
+                <!-- 왼쪽 카드: 슬리터 테이블 -->
+                <div class="slitter-card">
+                    <div class="slitter-card-header">
+                        <h3 class="slitter-card-title">일자별 상세 내역</h3>
+                        <div class="slitter-detail-controls">
+                            <input type="month" id="slitter-detail-month" class="slitter-detail-month-input">
+                            <button class="btn-slitter-detail-save primary small" id="btn-slitter-detail-save" disabled>저장</button>
+                            <button class="primary small" id="btn-slitter-export" disabled>엑셀 다운로드</button>
+                        </div>
+                    </div>
+                    <!-- 분석 텍스트 영역 -->
+                    <div class="slitter-analysis" id="slitter-analysis">
+                        <span class="analysis-icon">📊</span>
+                        <span class="analysis-text">일 재단량</span>
+                        <input type="number" id="slitter-daily-cut" class="slitter-daily-cut-input" placeholder="톤" min="1" step="1" value="35">
+                        <span class="analysis-text">ton 기준,</span>
+                        <span class="analysis-result" id="slitter-analysis-result">—</span>
+                    </div>
+                    <div class="table-scroll-container">
+                        <div class="table-wrapper" style="overflow-x:auto;">
+                            <table class="slitter-table" id="slitter-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-domestic">내수구분</th>
+                                        <th class="col-paper-code">지종코드</th>
+                                        <th class="col-basis-weight">평량</th>
+                                        <th class="col-width">가로길이</th>
+                                        <th class="col-weight">중량(합계, ton)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="slitter-tbody">
+                                    <!-- JS에서 VLOOKUP 그룹핑 동적 생성 -->
+                                </tbody>
+                                <tfoot id="slitter-tfoot">
+                                    <!-- JS에서 내수합계/수출합계/총합계 동적 생성 -->
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <p class="slitter-note">* 내수/수출 → 지종코드 → 평량 → 가로길이 기준 VLOOKUP 집계. 해당월 1일~당일 데이터.</p>
                 </div>
-                <div class="table-scroll-container">
-                    <div class="table-wrapper" style="overflow-x:auto;">
-                        <table class="slitter-table" id="slitter-table">
-                            <thead>
-                                <tr>
-                                    <th class="col-domestic">내수구분</th>
-                                    <th class="col-represent">대표지종</th>
-                                    <th class="col-paper-code">지종코드</th>
-                                    <th class="col-basis-weight">평량</th>
-                                    <th class="col-width">가로길이</th>
-                                    <th class="col-weight">중량</th>
-                                </tr>
-                            </thead>
-                            <tbody id="slitter-tbody">
-                                <!-- ── 내수 그룹 ── -->
-                                <tr class="slitter-row" data-group="domestic">
-                                    <td>내수</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="slitter-subtotal-row" data-group="domestic-subtotal">
-                                    <td class="subtotal-label">내수 합계</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="subtotal-value"></td>
-                                </tr>
-                                <!-- ── 수출 그룹 ── -->
-                                <tr class="slitter-row" data-group="export">
-                                    <td>수출</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="slitter-subtotal-row" data-group="export-subtotal">
-                                    <td class="subtotal-label">수출 합계</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="subtotal-value"></td>
-                                </tr>
-                                <!-- ── 총 합계 ── -->
-                                <tr class="slitter-grandtotal-row">
-                                    <td class="grandtotal-label">총 합계</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="grandtotal-value"></td>
-                                </tr>
-                            </tbody>
-                        </table>
+
+                <!-- 오른쪽 카드: 상하 2분할 차트 -->
+                <div class="slitter-right-stack">
+                    <!-- 상단: 일자별 슬리터 대기 현황 -->
+                    <div class="slitter-card slitter-chart-card">
+                        <div class="slitter-card-header">
+                            <h3 class="slitter-card-title">일자별 슬리터 대기 현황</h3>
+                        </div>
+                        <div class="slitter-chart-wrap">
+                            <canvas id="slitter-daily-chart"></canvas>
+                        </div>
+                    </div>
+                    <!-- 하단: 수불부 추이 -->
+                    <div class="slitter-card slitter-chart-card">
+                        <div class="slitter-card-header">
+                            <h3 class="slitter-card-title">수불부 추이</h3>
+                        </div>
+                        <div class="slitter-chart-wrap">
+                            <canvas id="slitter-subulbu-chart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <p class="slitter-note">* 데이터는 외부 시스템 연동(Vlookup 기반)으로 적재됩니다. 대표지종 → 지종코드 → 평량 → 가로길이 순 정렬.</p>
             </div>
 
             <!-- ── 슬리터 수불부 ── -->
@@ -864,7 +861,7 @@
                         <table class="subulbu-table" id="subulbu-table">
                             <thead>
                                 <tr id="subulbu-header-row">
-                                    <th class="subulbu-th-label" colspan="2">일자</th>
+                                    <th class="subulbu-th-label" colspan="2" id="subulbu-month-label">7월</th>
                                     <!-- 날짜 컬럼은 JS에서 동적 생성 -->
                                 </tr>
                             </thead>
@@ -1454,6 +1451,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260730d"></script>
+<script src="js/app.js?v=20260803p"></script>
 </body>
 </html>
