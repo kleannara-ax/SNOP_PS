@@ -2821,6 +2821,15 @@ function renderSlitterDetailTable() {
         items.forEach(function (item, idx) {
             var tr = document.createElement('tr');
             tr.className = 'slitter-row slitter-group-' + groupClass;
+
+            /* 그룹 경계 클래스: 다음 행과 비교하여 마지막 행에 추가 */
+            var next = items[idx + 1] || null;
+            if (!next || next.paper_code !== item.paper_code) {
+                tr.className += ' slitter-code-last';   /* 지종코드 그룹 마지막 행 */
+            } else if (next.basis_weight !== item.basis_weight) {
+                tr.className += ' slitter-bw-last';     /* 평량 그룹 마지막 행 */
+            }
+
             var html = '';
 
             /* ① 내수구분 — 그룹 첫 행에만 rowspan */

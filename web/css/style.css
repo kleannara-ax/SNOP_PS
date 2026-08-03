@@ -446,9 +446,19 @@ main {
     background: #fafbfc !important;
 }
 
+/* ── 그룹 경계선 (지종코드/평량 변경 지점) ── */
+/* 지종코드 그룹 마지막 행 — 가장 진한 구분선 */
+.slitter-code-last td {
+    border-bottom: 2px solid #cbd5e1;
+}
+/* 평량 그룹 마지막 행 — 중간 굵기 구분선 */
+.slitter-bw-last td {
+    border-bottom: 2px solid #e2e8f0;
+}
+
 /* 소계 행 아래 구분 (내수↔수출 사이) */
 .slitter-subtotal-row td {
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid #cbd5e1;
 }
 
 /* ── 소계 행 (내수 합계 / 수출 합계) ── */
