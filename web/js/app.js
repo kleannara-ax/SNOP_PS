@@ -2264,6 +2264,7 @@ const subulbuState = {
 
 /**
  * 슬리터 상세 데이터에서 일자별 내수/수출 중량 집계 (ton 단위)
+ * ※ 이 함수는 차트(renderSlitterDailyChart, renderSlitterSubulbuChart)에서만 사용
  * @param {string} yearMonth  — 'YYYY-MM'
  * @returns {{ [day: string]: { domestic: number, export: number } }}
  */
@@ -2292,36 +2293,61 @@ function aggregateSlitterDaily(yearMonth) {
 }
 
 /**
+ * 슬리터 상세 데이터에서 일자별 총합계 집계 (ton 단위)
+ * → 당일 총합계 = 수불부 기말 값
+ * @param {string} yearMonth  — 'YYYY-MM'
+ * @returns {{ [day: string]: number }} — 일자별 총합계 (ton)
+ */
+function aggregateSlitterDailyTotal(yearMonth) {
+    var rows = slitterDetailState.rows || [];
+    var dailyTotalMap = {};
+
+    rows.forEach(function (r) {
+        var date = r.date || '';
+        if (!date) return;
+        if (date.substring(0, 7) !== yearMonth) return;
+
+        var day = String(parseInt(date.substring(8, 10), 10));
+        if (!dailyTotalMap[day]) dailyTotalMap[day] = 0;
+        dailyTotalMap[day] += (Number(r.weight) || 0) / 1000; // kg → ton
+    });
+
+    return dailyTotalMap;
+}
+
+/**
  * 수불부 산술 계산
- * 기말 = 일자별 상세 내역의 1일~해당일까지 누적 총합계 (ton)
+ * ─────────────────────────────────────────────
+ * 기말 = 일자별 상세 내역의 "당일" 총합계 (ton)
+ * 기초 = 전일 기말 (1일은 전월 마지막일 기말값)
+ * 내수/수출(작업) = 별도 I/F 테이블 (미구현, 0)
+ * 계 = 내수 + 수출
+ * 입고 = 기말 + 계 - 기초
+ * ─────────────────────────────────────────────
  * @param {number} daysInMonth — 해당 월 일수
- * @param {{ [day: string]: { domestic: number, export: number } }} dailyIF — I/F 집계
+ * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 당일 총합계 (ton)
  * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
  */
-function calcSubulbu(daysInMonth, dailyIF, prevMonthLastGimal) {
+function calcSubulbu(daysInMonth, dailyTotal, prevMonthLastGimal) {
     var kicho = [], ipgo = [], naesu = [], suchul = [], gye = [], gimal = [];
 
-    /* 기말 = 1일부터 해당일까지의 누적 총합계 (ton) */
-    var cumTotal = 0;
     for (var d = 1; d <= daysInMonth; d++) {
         var dayKey = String(d);
-        var ifData = dailyIF[dayKey] || { domestic: 0, export: 0 };
 
-        /* 내수/수출: I/F 데이터 */
-        var naesuVal = Math.round(ifData.domestic * 10) / 10;
-        var suchulVal = Math.round(ifData.export * 10) / 10;
-
-        /* 계 = 내수 + 수출 */
-        var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
-
-        /* 기말 = 1일~해당일까지 누적 총합계 */
-        cumTotal += (ifData.domestic + ifData.export);
-        var gimalVal = Math.round(cumTotal * 10) / 10;
+        /* 기말 = 당일 상세내역 총합계 */
+        var gimalVal = Math.round((dailyTotal[dayKey] || 0) * 10) / 10;
 
         /* 기초 = 전일 기말 (1일은 전월 마지막일 기말값) */
         var kichoVal = (d === 1) ? (prevMonthLastGimal || 0) : (gimal[d - 2] || 0);
         kichoVal = Math.round(kichoVal * 10) / 10;
+
+        /* 내수/수출(작업) = 별도 I/F 테이블에서 가져옴 (추후 연동) */
+        var naesuVal = 0;
+        var suchulVal = 0;
+
+        /* 계 = 내수 + 수출 */
+        var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
 
         /* 입고 = 기말 + 계 - 기초 */
         var ipgoVal = Math.round((gimalVal + gyeVal - kichoVal) * 10) / 10;
@@ -2373,11 +2399,11 @@ function renderSubulbuTable(year, month) {
         headerRow.appendChild(th);
     }
 
-    /* ── I/F 데이터 집계 ── */
-    var dailyIF = aggregateSlitterDaily(yearMonth);
+    /* ── 일자별 상세내역 당일 총합계 집계 (기말 용) ── */
+    var dailyTotal = aggregateSlitterDailyTotal(yearMonth);
 
     /* ── 산술 계산 (전월 기말값 포함) ── */
-    var calc = calcSubulbu(daysInMonth, dailyIF, subulbuState.prevMonthLastGimal);
+    var calc = calcSubulbu(daysInMonth, dailyTotal, subulbuState.prevMonthLastGimal);
 
     /* ── 행 구조 정의 (기말 포함 전체 자동계산) ── */
     const rowDefs = [
