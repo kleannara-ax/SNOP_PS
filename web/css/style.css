@@ -438,12 +438,14 @@ main {
     font-weight: 600;
     color: #334155;
     background: #f8fafc !important;
+    border-bottom: 2px solid #cbd5e1;
 }
 
 /* ── 평량 rowspan (3단계) ── */
 .slitter-bw-cell {
     color: #475569;
     background: #fafbfc !important;
+    border-bottom: 2px solid #cbd5e1;
 }
 
 /* ── 그룹 경계선 (지종코드/평량 변경 지점) ── */
