@@ -2600,6 +2600,9 @@ function loadSubulbuData() {
             /* 렌더링 */
             var parts = ym.split('-');
             renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
+
+            /* 수불부 추이 차트도 갱신 (작업 I/F 데이터 기반) */
+            renderSlitterSubulbuChart();
         })
         .catch(function (err) {
             console.error('[수불부 로드 오류]', err);
@@ -3373,18 +3376,18 @@ function renderSlitterSubulbuChart() {
     var canvas = document.getElementById('slitter-subulbu-chart');
     if (!canvas) return;
 
-    var rows = slitterDetailState.rows || [];
-
-    /* ── 일자별 출고량 집계 (ton) ── */
+    /* ── 작업(I/F) 데이터에서 일자별 출고량(내수+수출) 집계 (ton) ── */
+    var workRows = subulbuState.workRows || [];
     var dailyMap = {};
-    rows.forEach(function (r) {
-        var date = r.date || '';
+    workRows.forEach(function (r) {
+        var date = r.work_date || '';
         if (!date) return;
         if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        var w = (Number(r.weight) || 0) / 1000; // kg → ton
         if (r.domestic === '내수') {
-            dailyMap[date].domestic += (Number(r.weight) || 0);
+            dailyMap[date].domestic += w;
         } else {
-            dailyMap[date].export += (Number(r.weight) || 0);
+            dailyMap[date].export += w;
         }
     });
 
@@ -3407,16 +3410,16 @@ function renderSlitterSubulbuChart() {
         return Number(parts[1]) + '/' + Number(parts[2]);
     });
 
-    /* 일자별 출고(작업) = 내수 + 수출 */
+    /* 일자별 출고(작업) = 내수 + 수출 (계) */
     var shipOutData = dates.map(function (d) {
-        return Math.round((dailyMap[d].domestic + dailyMap[d].export) / 100) / 10;
+        return Math.round((dailyMap[d].domestic + dailyMap[d].export) * 10) / 10;
     });
 
     /* 누적 출고량 */
     var cumulative = [];
     var runningTotal = 0;
     dates.forEach(function (d) {
-        runningTotal += (dailyMap[d].domestic + dailyMap[d].export) / 1000;
+        runningTotal += (dailyMap[d].domestic + dailyMap[d].export);
         cumulative.push(Math.round(runningTotal * 10) / 10);
     });
 
