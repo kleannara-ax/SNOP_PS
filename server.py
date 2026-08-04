@@ -1069,34 +1069,128 @@ def api_slitter_detail_save():
 # ═══════════════════════════════════════════════
 # 슬리터 외주 진행 내역 API
 # ═══════════════════════════════════════════════
-# DB 스키마 (JSON 기반):
-# ┌─────────────────────────────────────────────────────────────┐
-# │ 테이블명: slitter_outsource                                 │
-# ├─────────────┬──────────┬──────────────────────────────────┤
-# │ 필드명       │ 타입      │ 설명                             │
-# ├─────────────┼──────────┼──────────────────────────────────┤
-# │ year_month   │ string   │ 대상 월 (YYYY-MM), PK 역할       │
-# │ days         │ object   │ 일자별 데이터 { "1": {...}, ... } │
-# │  └ cheongju  │ number   │ 청주대기 (수기입력)               │
-# │  └ ipgo      │ number   │ 입고 (수기입력)                   │
-# │  └ slitting  │ number   │ 슬리팅실적 (수기입력)             │
-# │  └ daegi     │ number   │ 대기재고 (자동계산)               │
-# │  └ slit_ipgo │ number   │ 슬리팅 입고 (수기입력)            │
-# │  └ chulgo    │ number   │ 출고 (수기입력)                   │
-# │  └ bogwan    │ number   │ 보관재고 (자동계산)               │
-# │  └ total     │ number   │ 계 (자동계산 = 대기재고+보관재고) │
-# │ updated_at   │ string   │ 최종 수정일시 (ISO)              │
-# │ updated_by   │ string   │ 최종 수정자                      │
-# └─────────────┴──────────┴──────────────────────────────────┘
+# DB 테이블: ps_slitter_outsource (DDL → db/ps_slitter_outsource.sql)
+# 저장 필드: year_month, day_no, cheongju, ipgo, slitting, slit_ipgo, chulgo
+# ※ 대기재고/보관재고/계는 프론트에서 자동계산 (DB 미저장)
+#   - 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적
+#   - 보관재고 = 슬리팅 입고 - 출고
+#   - 계 = 대기재고 + 보관재고
+# ※ DB 연결 실패 시 JSON 파일 폴백 (data/slitter_outsource.json)
+# ═══════════════════════════════════════════════
+
+OUTSOURCE_EDITABLE_FIELDS = ['cheongju', 'ipgo', 'slitting', 'slit_ipgo', 'chulgo']
+
+
+def _outsource_load_db(ym):
+    """DB에서 외주 진행 내역 로드. 성공 시 dict, 실패 시 None."""
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                'SELECT day_no, cheongju, ipgo, slitting, slit_ipgo, chulgo, '
+                '       updated_by, updated_dt '
+                'FROM ps_slitter_outsource '
+                'WHERE year_month = %s ORDER BY day_no',
+                (ym,)
+            )
+            rows = cursor.fetchall()
+        if not rows:
+            return {'year_month': ym, 'days': {}}
+        days = {}
+        last_updated_by = None
+        last_updated_dt = None
+        for row in rows:
+            d = str(row['day_no'])
+            days[d] = {
+                f: float(row[f]) if row[f] is not None else None
+                for f in OUTSOURCE_EDITABLE_FIELDS
+            }
+            if row.get('updated_dt'):
+                last_updated_by = row.get('updated_by')
+                last_updated_dt = row['updated_dt'].isoformat() if hasattr(row['updated_dt'], 'isoformat') else str(row['updated_dt'])
+        return {
+            'year_month': ym,
+            'days': days,
+            'updated_at': last_updated_dt,
+            'updated_by': last_updated_by,
+        }
+    except Exception as e:
+        print(f'[DB] 외주 로드 실패 — JSON 폴백: {e}')
+        return None
+    finally:
+        conn.close()
+
+
+def _outsource_save_db(ym, clean_days, user_id):
+    """DB에 외주 진행 내역 저장 (UPSERT). 성공 시 True, 실패 시 False."""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cursor:
+            # 해당 월의 기존 데이터 중 전송되지 않은 일자 삭제
+            existing_days = set()
+            cursor.execute(
+                'SELECT day_no FROM ps_slitter_outsource WHERE year_month = %s',
+                (ym,)
+            )
+            for row in cursor.fetchall():
+                existing_days.add(str(row['day_no']))
+            new_days = set(clean_days.keys())
+            delete_days = existing_days - new_days
+            for d in delete_days:
+                cursor.execute(
+                    'DELETE FROM ps_slitter_outsource '
+                    'WHERE year_month = %s AND day_no = %s',
+                    (ym, int(d))
+                )
+
+            # UPSERT (INSERT ... ON DUPLICATE KEY UPDATE)
+            for day_str, day_data in clean_days.items():
+                day_no = int(day_str)
+                cursor.execute(
+                    'INSERT INTO ps_slitter_outsource '
+                    '  (year_month, day_no, cheongju, ipgo, slitting, slit_ipgo, chulgo, created_by) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s) '
+                    'ON DUPLICATE KEY UPDATE '
+                    '  cheongju  = VALUES(cheongju), '
+                    '  ipgo      = VALUES(ipgo), '
+                    '  slitting  = VALUES(slitting), '
+                    '  slit_ipgo = VALUES(slit_ipgo), '
+                    '  chulgo    = VALUES(chulgo), '
+                    '  updated_by = VALUES(created_by)',
+                    (ym, day_no,
+                     day_data.get('cheongju'), day_data.get('ipgo'),
+                     day_data.get('slitting'), day_data.get('slit_ipgo'),
+                     day_data.get('chulgo'), user_id)
+                )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f'[DB] 외주 저장 실패 — JSON 폴백: {e}')
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 
 @app.route('/api/slitter-outsource/load', methods=['GET'])
 def api_slitter_outsource_load():
-    """슬리터 외주 진행 내역 로드 — year_month 파라미터 필수"""
+    """슬리터 외주 진행 내역 로드 — DB 우선, JSON 폴백"""
     ym = request.args.get('year_month', '').strip()
     if not ym:
         return jsonify({'success': False, 'message': 'year_month 파라미터 필요'}), 400
 
+    # 1) DB 시도
+    db_result = _outsource_load_db(ym)
+    if db_result is not None:
+        if not db_result.get('days'):
+            return jsonify({'success': True, 'data': None, 'message': '데이터 없음 (DB)'})
+        return jsonify({'success': True, 'data': db_result})
+
+    # 2) JSON 폴백
     all_data = load_json_file(SLITTER_OUTSOURCE_FILE, {})
     record = all_data.get(ym, None)
     if record is None:
@@ -1106,7 +1200,7 @@ def api_slitter_outsource_load():
 
 @app.route('/api/slitter-outsource/save', methods=['POST'])
 def api_slitter_outsource_save():
-    """슬리터 외주 진행 내역 저장 — 월 단위 전체 저장"""
+    """슬리터 외주 진행 내역 저장 — DB 우선, JSON 폴백"""
     body = request.get_json(silent=True)
     if not body:
         return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
@@ -1118,18 +1212,35 @@ def api_slitter_outsource_save():
     if not ym:
         return jsonify({'success': False, 'message': 'year_month 필요'}), 400
 
+    # 수기입력 5개 필드만 저장 (자동계산 필드 daegi/bogwan/total 제외)
+    editable_set = set(OUTSOURCE_EDITABLE_FIELDS)
+    clean_days = {}
+    for day_key, day_val in days.items():
+        if not isinstance(day_val, dict):
+            continue
+        cleaned = {k: v for k, v in day_val.items() if k in editable_set}
+        if any(v is not None for v in cleaned.values()):
+            clean_days[day_key] = cleaned
+
+    now_iso = datetime.now().isoformat()
+
+    # 1) DB 시도
+    db_saved = _outsource_save_db(ym, clean_days, user_id)
+
+    # 2) JSON도 항상 저장 (DB 성공 여부 무관 — 백업 겸용)
     all_data = load_json_file(SLITTER_OUTSOURCE_FILE, {})
     all_data[ym] = {
         'year_month': ym,
-        'days': days,
-        'updated_at': datetime.now().isoformat(),
+        'days': clean_days,
+        'updated_at': now_iso,
         'updated_by': user_id,
     }
     save_json_file(SLITTER_OUTSOURCE_FILE, all_data)
 
+    storage = 'DB+JSON' if db_saved else 'JSON'
     return jsonify({
         'success': True,
-        'message': f'{ym} 슬리터 외주 진행 내역 저장 완료',
+        'message': f'{ym} 슬리터 외주 진행 내역 저장 완료 ({storage})',
         'data': all_data[ym],
     })
 
