@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260804d">
+    <link rel="stylesheet" href="css/style.css?v=20260804j">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -53,9 +53,9 @@
                     <button class="sidebar-submenu-item" data-sub="obsolete-list">진부화재고 리스트</button>
                 </div>
             </div>
-            <button class="sidebar-menu-item" data-view="sales-upload" data-tooltip="판매계획 업로드">
+            <button class="sidebar-menu-item" data-view="sales-upload" data-tooltip="재공 예측">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-                <span class="sidebar-label">판매계획 업로드</span>
+                <span class="sidebar-label">재공 예측</span>
             </button>
             <div class="sidebar-group" id="sidebar-group-table">
                 <button class="sidebar-menu-item has-children" data-view="table" data-tooltip="재공실적 분석">
@@ -70,21 +70,21 @@
                     <button class="sidebar-submenu-item" data-table-sub="packaging">원지포장</button>
                 </div>
             </div>
-            <button class="sidebar-menu-item" data-view="line-capa" data-tooltip="생산 CAPA 현황">
+            <button class="sidebar-menu-item" data-view="line-capa" data-tooltip="생산계획 현황">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                <span class="sidebar-label">생산 CAPA 현황</span>
+                <span class="sidebar-label">생산계획 현황</span>
             </button>
-            <button class="sidebar-menu-item" data-view="dashboard" data-tooltip="계획 대비 실적 현황">
+            <button class="sidebar-menu-item" data-view="dashboard" data-tooltip="재고 예측">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span class="sidebar-label">계획 대비 실적 현황</span>
+                <span class="sidebar-label">재고 예측</span>
             </button>
-            <button class="sidebar-menu-item" data-view="analytics" data-tooltip="재고 분석 대시보드">
+            <button class="sidebar-menu-item" data-view="analytics" data-tooltip="재고현황">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <span class="sidebar-label">재고 분석 대시보드</span>
+                <span class="sidebar-label">재고현황</span>
             </button>
-            <button class="sidebar-menu-item" data-view="optimal-inventory" data-tooltip="적정재고관리">
+            <button class="sidebar-menu-item" data-view="optimal-inventory" data-tooltip="폐품">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                <span class="sidebar-label">적정재고관리</span>
+                <span class="sidebar-label">폐품</span>
             </button>
             <button class="sidebar-menu-item" data-view="change-history" data-tooltip="변경 이력 관리">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -677,11 +677,11 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ -->
-    <!-- VIEW 3: 판매계획 업로드                          -->
+    <!-- VIEW 3: 재공 예측                          -->
     <!-- ══════════════════════════════════════════════ -->
     <section class="view-section" id="view-sales-upload" aria-hidden="true" style="display:none;">
         <div class="section-header">
-            <h2>판매계획 업로드</h2>
+            <h2>재공 예측</h2>
             <p>채널별 판매계획을 엑셀 파일로 업로드하거나 수기로 등록합니다.</p>
         </div>
         <div class="sales-upload-section">
@@ -846,6 +846,15 @@
                             <canvas id="slitter-subulbu-chart"></canvas>
                         </div>
                     </div>
+                    <!-- 외주 재고 추이 -->
+                    <div class="slitter-card slitter-chart-card">
+                        <div class="slitter-card-header">
+                            <h3 class="slitter-card-title">외주 재고 추이</h3>
+                        </div>
+                        <div class="slitter-chart-wrap">
+                            <canvas id="outsource-stock-chart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -905,6 +914,12 @@
                     <div class="outsource-controls">
                         <input type="month" id="outsource-month-selector" class="outsource-month-input">
                         <button class="btn-outsource-save primary small" id="btn-outsource-save" disabled>저장</button>
+                        <button type="button" id="btn-outsource-excel" class="btn-subulbu-excel" title="엑셀 다운로드">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 1v9M8 10L5 7M8 10l3-3M3 13h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Excel
+                        </button>
                     </div>
                 </div>
                 <div class="table-scroll-container">
@@ -998,11 +1013,11 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ -->
-    <!-- VIEW 5: 생산 CAPA 현황                          -->
+    <!-- VIEW 5: 생산계획 현황                            -->
     <!-- ══════════════════════════════════════════════ -->
     <section class="view-section" id="view-line-capa" aria-hidden="true" style="display:none;">
         <div class="section-header">
-            <h2>생산 CAPA 현황</h2>
+            <h2>생산계획 현황</h2>
             <p>라인별 생산능력(CAPA) 대비 계획 물량 현황을 모니터링합니다.</p>
         </div>
 
@@ -1028,11 +1043,11 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ -->
-    <!-- VIEW 6: 계획 대비 실적 현황                       -->
+    <!-- VIEW 6: 재고 예측                                -->
     <!-- ══════════════════════════════════════════════ -->
     <section class="view-section" id="view-dashboard" aria-hidden="true" style="display:none;">
         <div class="section-header">
-            <h2>계획 대비 실적 현황</h2>
+            <h2>재고 예측</h2>
             <p>판매·생산 계획 대비 실적 달성률과 재고 예측 현황을 분석합니다.</p>
         </div>
 
@@ -1080,11 +1095,11 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ -->
-    <!-- VIEW 7: 재고 분석 대시보드                        -->
+    <!-- VIEW 7: 재고현황                                  -->
     <!-- ══════════════════════════════════════════════ -->
     <section class="view-section" id="view-analytics" aria-hidden="true" style="display:none;">
         <div class="section-header">
-            <h2>재고 분석 대시보드</h2>
+            <h2>재고현황</h2>
             <p>재고 리스크 자재를 식별하고 분석합니다.</p>
         </div>
 
@@ -1110,11 +1125,11 @@
     </section>
 
     <!-- ══════════════════════════════════════════════ -->
-    <!-- VIEW 8: 적정재고관리                              -->
+    <!-- VIEW 8: 폐품                                      -->
     <!-- ══════════════════════════════════════════════ -->
     <section class="view-section" id="view-optimal-inventory" aria-hidden="true" style="display:none;">
         <div class="section-header">
-            <h2>적정재고관리</h2>
+            <h2>폐품</h2>
             <p>카테고리별 적정재고 기준을 설정하고, 실제 재고와 비교·분석합니다.</p>
         </div>
 
@@ -1458,6 +1473,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260804d"></script>
+<script src="js/app.js?v=20260804j"></script>
 </body>
 </html>

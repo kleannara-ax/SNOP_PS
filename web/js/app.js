@@ -25,12 +25,12 @@ const state = {
 const VIEW_LABELS = {
     'summary': '통합 계획 요약',
     'planner': '진부화재고',
-    'sales-upload': '판매계획 업로드',
+    'sales-upload': '재공 예측',
     'table': '재공실적 분석',
-    'line-capa': '생산 CAPA 현황',
-    'dashboard': '계획 대비 실적 현황',
-    'analytics': '재고 분석 대시보드',
-    'optimal-inventory': '적정재고관리',
+    'line-capa': '생산계획 현황',
+    'dashboard': '재고 예측',
+    'analytics': '재고현황',
+    'optimal-inventory': '폐품',
     'change-history': '변경 이력 관리',
     'interface-mgmt': '인터페이스 관리',
     'user-mgmt': '사용자 관리',
@@ -2940,6 +2940,233 @@ function recalcOutsource() {
             sumCell.textContent = rowSums[field] || '';
         }
     });
+
+    /* 차트 갱신 */
+    renderOutsourceChart();
+}
+
+/* ── 외주 재고 추이 차트 ── */
+var outsourceChartInstance = null;
+
+/**
+ * 외주 재고 추이 꺾은선 그래프 (대기재고 / 보관재고)
+ * outsourceState.days 에서 데이터를 읽어 Chart.js 로 렌더링
+ */
+function renderOutsourceChart() {
+    var canvas = document.getElementById('outsource-stock-chart');
+    if (!canvas) return;
+
+    var ym = outsourceState.yearMonth;
+    if (!ym) return;
+
+    var parts = ym.split('-');
+    var year  = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* ── 일자별 데이터 수집 ── */
+    var labels   = [];
+    var daegiArr = [];
+    var bogwanArr = [];
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        labels.push(d + '일');
+        var dayData = outsourceState.days[d] || {};
+        daegiArr.push(dayData.daegi != null ? dayData.daegi : 0);
+        bogwanArr.push(dayData.bogwan != null ? dayData.bogwan : 0);
+    }
+
+    /* 기존 차트 파기 */
+    if (outsourceChartInstance) {
+        outsourceChartInstance.destroy();
+        outsourceChartInstance = null;
+    }
+
+    /* 데이터가 전혀 없으면 빈 캔버스 */
+    var hasData = daegiArr.some(function (v) { return v !== 0; }) ||
+                  bogwanArr.some(function (v) { return v !== 0; });
+    if (!hasData) {
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    outsourceChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '대기재고',
+                    data: daegiArr,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.10)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 5,
+                    tension: 0.3,
+                    fill: true,
+                },
+                {
+                    label: '보관재고',
+                    data: bogwanArr,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.10)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 5,
+                    tension: 0.3,
+                    fill: true,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 12,
+                        boxHeight: 12,
+                        borderRadius: 3,
+                        useBorderRadius: true,
+                        padding: 16,
+                        font: { family: "'Noto Sans KR', sans-serif", size: 12, weight: '600' },
+                        color: '#475569',
+                    },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    bodyFont: { family: "'Noto Sans KR', sans-serif", size: 12 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 16,
+                    },
+                    border: { color: '#e2e8f0' },
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: '재고량',
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#64748b',
+                    },
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        font: { family: "'Noto Sans KR', sans-serif", size: 11 },
+                        color: '#94a3b8',
+                    },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * 외주 진행 내역 엑셀 다운로드
+ */
+function downloadOutsourceExcel() {
+    var ym = outsourceState.yearMonth;
+    if (!ym) { alert('월을 선택해주세요.'); return; }
+
+    var parts = ym.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* recalc 실행하여 최신 계산값 보장 */
+    recalcOutsource();
+
+    /* ── 행 정의 (테이블과 동일한 순서) ── */
+    var rowDefs = [
+        { key: 'cheongju',  group: '원규격(에페 입고)', label: '청주대기' },
+        { key: 'ipgo',      group: '',                  label: '입고' },
+        { key: 'slitting',  group: '',                  label: '슬리팅실적' },
+        { key: 'daegi',     group: '',                  label: '대기재고' },
+        { key: 'slit_ipgo', group: '재단완료(원지)',     label: '슬리팅 입고' },
+        { key: 'chulgo',    group: '',                  label: '출고' },
+        { key: 'bogwan',    group: '',                  label: '보관재고' },
+        { key: 'total',     group: '',                  label: '계' },
+    ];
+
+    /* ── 헤더 행 ── */
+    var header = ['구분', '항목'];
+    for (var d = 1; d <= daysInMonth; d++) {
+        header.push(d + '일');
+    }
+    header.push('합계');
+
+    /* ── 데이터 행 ── */
+    var wsData = [header];
+    var currentGroup = '';
+    rowDefs.forEach(function (def) {
+        var row = [];
+        /* 구분(그룹) 컬럼 */
+        if (def.group) {
+            currentGroup = def.group;
+            row.push(def.group);
+        } else {
+            row.push('');
+        }
+        /* 항목 컬럼 */
+        row.push(def.label);
+
+        /* 일자별 데이터 + 합계 */
+        var rowSum = 0;
+        for (var dd = 1; dd <= daysInMonth; dd++) {
+            var dayData = outsourceState.days[dd] || {};
+            var val = dayData[def.key] != null ? dayData[def.key] : 0;
+            row.push(val);
+            rowSum += val;
+        }
+        row.push(rowSum);
+        wsData.push(row);
+    });
+
+    /* ── XLSX 워크북 생성 ── */
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    /* 컬럼 너비 설정 */
+    var colWidths = [{ wch: 16 }, { wch: 12 }];
+    for (var c = 0; c < daysInMonth; c++) {
+        colWidths.push({ wch: 8 });
+    }
+    colWidths.push({ wch: 10 }); /* 합계 */
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, '외주진행내역');
+    XLSX.writeFile(wb, '슬리터_외주진행내역_' + ym + '.xlsx');
 }
 
 /**
@@ -2999,12 +3226,24 @@ function saveOutsourceData() {
     /* 자동 계산 최종 실행 */
     recalcOutsource();
 
+    /* 수기입력 5개 필드만 전송 (자동계산 daegi/bogwan/total 제외) */
+    var EDITABLE_FIELDS = ['cheongju', 'ipgo', 'slitting', 'slit_ipgo', 'chulgo'];
+    var cleanDays = {};
+    Object.keys(outsourceState.days).forEach(function (d) {
+        var src = outsourceState.days[d] || {};
+        var cleaned = {};
+        EDITABLE_FIELDS.forEach(function (f) {
+            if (src[f] !== undefined) cleaned[f] = src[f];
+        });
+        if (Object.keys(cleaned).length > 0) cleanDays[d] = cleaned;
+    });
+
     fetch('/api/slitter-outsource/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             year_month: ym,
-            days: outsourceState.days,
+            days: cleanDays,
             user_id: 'admin',
         }),
     })
@@ -3064,6 +3303,12 @@ function initOutsource() {
     const saveBtn = document.getElementById('btn-outsource-save');
     if (saveBtn) {
         saveBtn.addEventListener('click', saveOutsourceData);
+    }
+
+    /* 엑셀 다운로드 버튼 바인딩 */
+    const excelBtn = document.getElementById('btn-outsource-excel');
+    if (excelBtn) {
+        excelBtn.addEventListener('click', downloadOutsourceExcel);
     }
 }
 
