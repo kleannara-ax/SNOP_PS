@@ -2294,26 +2294,37 @@ function aggregateSlitterDaily(yearMonth) {
 }
 
 /**
- * 슬리터 상세 데이터에서 일자별 총합계 집계 (ton 단위)
- * → 당일 총합계 = 수불부 기말 값
+ * 슬리터 상세 데이터에서 일자별 **누적** 총합계 집계 (ton 단위)
+ * → 1일~해당일까지의 누적 총합계 = 수불부 기말 값
  * @param {string} yearMonth  — 'YYYY-MM'
- * @returns {{ [day: string]: number }} — 일자별 총합계 (ton)
+ * @param {number} daysInMonth — 해당 월 일수
+ * @returns {{ [day: string]: number }} — 일자별 누적 총합계 (ton)
  */
-function aggregateSlitterDailyTotal(yearMonth) {
+function aggregateSlitterDailyTotal(yearMonth, daysInMonth) {
     var rows = slitterDetailState.rows || [];
-    var dailyTotalMap = {};
+    var dailyMap = {};
 
+    /* 먼저 일자별 당일 합계 집계 */
     rows.forEach(function (r) {
         var date = r.date || '';
         if (!date) return;
         if (date.substring(0, 7) !== yearMonth) return;
 
         var day = String(parseInt(date.substring(8, 10), 10));
-        if (!dailyTotalMap[day]) dailyTotalMap[day] = 0;
-        dailyTotalMap[day] += (Number(r.weight) || 0) / 1000; // kg → ton
+        if (!dailyMap[day]) dailyMap[day] = 0;
+        dailyMap[day] += (Number(r.weight) || 0) / 1000; // kg → ton
     });
 
-    return dailyTotalMap;
+    /* 1일부터 해당일까지 누적 합산 */
+    var cumulativeMap = {};
+    var cumSum = 0;
+    for (var d = 1; d <= (daysInMonth || 31); d++) {
+        var dk = String(d);
+        cumSum += (dailyMap[dk] || 0);
+        cumulativeMap[dk] = cumSum;
+    }
+
+    return cumulativeMap;
 }
 
 /**
@@ -2347,14 +2358,14 @@ function aggregateSubulbuWork(yearMonth) {
 /**
  * 수불부 산술 계산
  * ─────────────────────────────────────────────
- * 기말 = 일자별 상세 내역의 "당일" 총합계 (ton)
+ * 기말 = 일자별 상세 내역의 1일~해당일 "누적" 총합계 (ton)
  * 기초 = 전일 기말 (1일은 전월 마지막일 기말값)
  * 내수/수출(작업) = 수불부 작업(I/F) 테이블에서 집계
  * 계 = 내수 + 수출
  * 입고 = 기말 + 계 - 기초
  * ─────────────────────────────────────────────
  * @param {number} daysInMonth — 해당 월 일수
- * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 당일 총합계 (ton)
+ * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 누적 총합계 (ton)
  * @param {{ [day: string]: { domestic: number, export: number } }} dailyWork — 작업(I/F) 일자별 집계
  * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
@@ -2430,8 +2441,8 @@ function renderSubulbuTable(year, month) {
         headerRow.appendChild(th);
     }
 
-    /* ── 일자별 상세내역 당일 총합계 집계 (기말 용) ── */
-    var dailyTotal = aggregateSlitterDailyTotal(yearMonth);
+    /* ── 일자별 상세내역 누적 총합계 집계 (기말 용) ── */
+    var dailyTotal = aggregateSlitterDailyTotal(yearMonth, daysInMonth);
 
     /* ── 작업(I/F) 일자별 내수/수출 집계 ── */
     var dailyWork = aggregateSubulbuWork(yearMonth);
@@ -2589,6 +2600,9 @@ function loadSubulbuData() {
             /* 렌더링 */
             var parts = ym.split('-');
             renderSubulbuTable(parseInt(parts[0], 10), parseInt(parts[1], 10));
+
+            /* 수불부 추이 차트도 갱신 (작업 I/F 데이터 기반) */
+            renderSlitterSubulbuChart();
         })
         .catch(function (err) {
             console.error('[수불부 로드 오류]', err);
@@ -3362,18 +3376,18 @@ function renderSlitterSubulbuChart() {
     var canvas = document.getElementById('slitter-subulbu-chart');
     if (!canvas) return;
 
-    var rows = slitterDetailState.rows || [];
-
-    /* ── 일자별 출고량 집계 (ton) ── */
+    /* ── 작업(I/F) 데이터에서 일자별 출고량(내수+수출) 집계 (ton) ── */
+    var workRows = subulbuState.workRows || [];
     var dailyMap = {};
-    rows.forEach(function (r) {
-        var date = r.date || '';
+    workRows.forEach(function (r) {
+        var date = r.work_date || '';
         if (!date) return;
         if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
+        var w = (Number(r.weight) || 0) / 1000; // kg → ton
         if (r.domestic === '내수') {
-            dailyMap[date].domestic += (Number(r.weight) || 0);
+            dailyMap[date].domestic += w;
         } else {
-            dailyMap[date].export += (Number(r.weight) || 0);
+            dailyMap[date].export += w;
         }
     });
 
@@ -3396,16 +3410,16 @@ function renderSlitterSubulbuChart() {
         return Number(parts[1]) + '/' + Number(parts[2]);
     });
 
-    /* 일자별 출고(작업) = 내수 + 수출 */
+    /* 일자별 출고(작업) = 내수 + 수출 (계) */
     var shipOutData = dates.map(function (d) {
-        return Math.round((dailyMap[d].domestic + dailyMap[d].export) / 100) / 10;
+        return Math.round((dailyMap[d].domestic + dailyMap[d].export) * 10) / 10;
     });
 
     /* 누적 출고량 */
     var cumulative = [];
     var runningTotal = 0;
     dates.forEach(function (d) {
-        runningTotal += (dailyMap[d].domestic + dailyMap[d].export) / 1000;
+        runningTotal += (dailyMap[d].domestic + dailyMap[d].export);
         cumulative.push(Math.round(runningTotal * 10) / 10);
     });
 
@@ -3472,6 +3486,28 @@ function renderSlitterSubulbuChart() {
                     callbacks: {
                         label: function (ctx) {
                             return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                        },
+                    },
+                },
+                annotation: {
+                    annotations: {
+                        idealZone: {
+                            type: 'box',
+                            yScaleID: 'y',
+                            yMin: 50,
+                            yMax: 70,
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            borderColor: 'rgba(59, 130, 246, 0.25)',
+                            borderWidth: 1,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: '이상적 출고 범위 (50~70ton)',
+                                position: 'start',
+                                font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: '500' },
+                                color: 'rgba(59, 130, 246, 0.6)',
+                                padding: 4,
+                            },
                         },
                     },
                 },
