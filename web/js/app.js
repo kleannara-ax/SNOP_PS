@@ -3489,6 +3489,28 @@ function renderSlitterSubulbuChart() {
                         },
                     },
                 },
+                annotation: {
+                    annotations: {
+                        idealZone: {
+                            type: 'box',
+                            yScaleID: 'y',
+                            yMin: 50,
+                            yMax: 70,
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            borderColor: 'rgba(59, 130, 246, 0.25)',
+                            borderWidth: 1,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: '이상적 출고 범위 (50~70ton)',
+                                position: 'start',
+                                font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: '500' },
+                                color: 'rgba(59, 130, 246, 0.6)',
+                                padding: 4,
+                            },
+                        },
+                    },
+                },
             },
             scales: {
                 x: {
