@@ -7814,6 +7814,32 @@ td.number {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
+.btn-subulbu-excel {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border: 1px solid #16a34a;
+    border-radius: 8px;
+    background: #fff;
+    color: #16a34a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.btn-subulbu-excel:hover {
+    background: #16a34a;
+    color: #fff;
+}
+.btn-subulbu-excel:active {
+    transform: scale(0.96);
+}
+.btn-subulbu-excel svg {
+    flex-shrink: 0;
+}
 
 /* ── 수불부 테이블 (모던 스타일) ── */
 .subulbu-table {

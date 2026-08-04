@@ -2638,6 +2638,69 @@ function initSubulbuMonthSelector() {
         loadSubulbuData();
     });
 
+    /* 엑셀 다운로드 버튼 */
+    var btnExcel = document.getElementById('btn-subulbu-excel');
+    if (btnExcel) {
+        btnExcel.addEventListener('click', downloadSubulbuExcel);
+    }
+}
+
+/**
+ * 수불부 테이블 데이터를 엑셀(XLSX) 파일로 다운로드
+ */
+function downloadSubulbuExcel() {
+    var ym = subulbuState.yearMonth;
+    if (!ym) { alert('월을 선택해주세요.'); return; }
+
+    var parts = ym.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* 일자별 상세내역 누적 총합계 (기말용) */
+    var dailyTotal = aggregateSlitterDailyTotal(ym, daysInMonth);
+    /* 작업(I/F) 일자별 내수/수출 집계 */
+    var dailyWork = aggregateSubulbuWork(ym);
+    /* 산술 계산 */
+    var calc = calcSubulbu(daysInMonth, dailyTotal, dailyWork, subulbuState.prevMonthLastGimal);
+
+    /* ── 엑셀 데이터 구성 ── */
+    var header = [month + '월'];
+    for (var d = 1; d <= daysInMonth; d++) {
+        header.push(d + '일');
+    }
+
+    var rowDefs = [
+        { label: '기초', data: calc.kicho },
+        { label: '입고', data: calc.ipgo },
+        { label: '작업-내수', data: calc.naesu },
+        { label: '작업-수출', data: calc.suchul },
+        { label: '작업-계', data: calc.gye },
+        { label: '기말', data: calc.gimal },
+    ];
+
+    var wsData = [header];
+    rowDefs.forEach(function (def) {
+        var row = [def.label];
+        for (var i = 0; i < daysInMonth; i++) {
+            row.push(def.data[i] || 0);
+        }
+        wsData.push(row);
+    });
+
+    /* XLSX 워크북 생성 */
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    /* 컬럼 너비 설정 */
+    var colWidths = [{ wch: 10 }];
+    for (var c = 0; c < daysInMonth; c++) {
+        colWidths.push({ wch: 9 });
+    }
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, '수불부');
+    XLSX.writeFile(wb, '슬리터_수불부_' + ym + '.xlsx');
 }
 
 /* ══════════════════════════════════════════════
