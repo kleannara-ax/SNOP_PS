@@ -8283,6 +8283,17 @@ td.number {
     font-weight: 800;
 }
 
+/* 최대CAPA / 일CAPA 행 */
+.pkg-summary-table .pkg-row-capa td {
+    background: #f8fafc;
+    font-weight: 500;
+    color: #475569;
+}
+.pkg-summary-table .pkg-row-capa td:first-child {
+    font-weight: 600;
+    color: #334155;
+}
+
 /* 가동율 행 */
 .pkg-summary-table .pkg-row-rate td {
     background: #fafbfd;
