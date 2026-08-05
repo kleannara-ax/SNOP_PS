@@ -4204,6 +4204,12 @@ function loadPackagingData() {
 }
 
 function initPackaging() {
+    /* 시스템 날짜 기준 라벨 */
+    var dateLabel = document.getElementById('pkg-date-label');
+    if (dateLabel) {
+        var now = new Date();
+        dateLabel.textContent = now.getMonth() + 1 + '월 ' + now.getDate() + '일 기준';
+    }
     loadPackagingData();
 }
 
