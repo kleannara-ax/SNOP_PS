@@ -8292,6 +8292,36 @@ td.number {
     font-weight: 600;
     color: #334155;
 }
+/* 일CAPA 입력 셀 */
+.pkg-summary-table .pkg-input-cell {
+    padding: 4px 6px;
+    background: #fff;
+}
+.pkg-capa-input {
+    width: 64px;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    text-align: center;
+    color: #1e293b;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+}
+.pkg-capa-input::-webkit-inner-spin-button,
+.pkg-capa-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.pkg-capa-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+.pkg-capa-input::placeholder {
+    color: #cbd5e1;
+}
 
 /* 가동율 행 */
 .pkg-summary-table .pkg-row-rate td {

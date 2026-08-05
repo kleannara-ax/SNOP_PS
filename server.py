@@ -1380,6 +1380,42 @@ def api_slitter_subulbu_work_save():
     })
 
 
+## ══════════════════════════════════════════════════
+##  원지포장 일CAPA 저장/로드
+## ══════════════════════════════════════════════════
+PKG_CAPA_FILE = os.path.join(DATA_DIR, 'packaging_capa.json')
+
+@app.route('/api/packaging/capa/load', methods=['GET'])
+def api_packaging_capa_load():
+    """일CAPA 데이터 로드 — 연도별 월별 일CAPA 값"""
+    year = request.args.get('year', str(datetime.now().year))
+    if os.path.exists(PKG_CAPA_FILE):
+        with open(PKG_CAPA_FILE, 'r', encoding='utf-8') as f:
+            all_data = json.load(f)
+    else:
+        all_data = {}
+    return jsonify({'success': True, 'data': all_data.get(year, {})})
+
+@app.route('/api/packaging/capa/save', methods=['POST'])
+def api_packaging_capa_save():
+    """일CAPA 데이터 저장 — { year, capa: { '01': 값, '02': 값, ... } }"""
+    body = request.get_json(force=True)
+    year = body.get('year', str(datetime.now().year))
+    capa = body.get('capa', {})
+
+    if os.path.exists(PKG_CAPA_FILE):
+        with open(PKG_CAPA_FILE, 'r', encoding='utf-8') as f:
+            all_data = json.load(f)
+    else:
+        all_data = {}
+
+    all_data[year] = capa
+    with open(PKG_CAPA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(all_data, f, ensure_ascii=False, indent=2)
+
+    return jsonify({'success': True, 'message': f'{year}년 일CAPA 저장 완료'})
+
+
 if __name__ == '__main__':
     print('=' * 50)
     print('PS S&OP 계획 시스템 — 백엔드 서버 시작')
