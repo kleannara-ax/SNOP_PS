@@ -4232,13 +4232,20 @@ function loadPkgCapa(callback) {
  * 현재는 빈 데이터로 테이블만 렌더링
  */
 function loadPackagingData() {
-    /* TODO: I/F 연동 시 fetch('/api/packaging/...') → packagingData 갱신 */
-    packagingData = {};
+    /* 실적 데이터 + 일CAPA 병렬 로드 후 테이블 렌더링 */
+    var done = 0;
+    var total = 2;
+    function check() { if (++done >= total) renderPackagingSummary(); }
 
-    /* 일CAPA를 먼저 로드한 뒤 테이블 렌더링 */
-    loadPkgCapa(function () {
-        renderPackagingSummary();
-    });
+    fetch('/api/packaging/data/load')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.success && res.data) packagingData = res.data;
+            check();
+        })
+        .catch(function () { check(); });
+
+    loadPkgCapa(function () { check(); });
 }
 
 function initPackaging() {
