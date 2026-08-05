@@ -8216,7 +8216,7 @@ td.number {
 .pkg-summary-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     color: #334155;
 }
 .pkg-summary-table th,
@@ -8233,7 +8233,6 @@ td.number {
     background: #f5f7fb;
     color: #475569;
     font-weight: 600;
-    font-size: 0.82rem;
     letter-spacing: 0.01em;
     border-bottom: 1px solid #dfe3ea;
 }
