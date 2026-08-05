@@ -4051,6 +4051,36 @@ function renderPackagingSummary() {
     html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg).toLocaleString() : '') + '</td>';
     html += '</tr>';
 
+    /* 최대CAPA 행 */
+    html += '<tr class="pkg-row-capa">';
+    html += '<td>최대CAPA</td>';
+    var capaMaxTotal = 0;
+    months.forEach(function (m) {
+        var ym = year + '-' + String(m).padStart(2, '0');
+        var val = (packagingData[ym] && packagingData[ym]['최대CAPA']) || 0;
+        capaMaxTotal += val;
+        html += '<td>' + (val ? Number(val).toLocaleString() : '') + '</td>';
+    });
+    var capaMaxAvg = months.length > 0 ? Math.round(capaMaxTotal / months.length) : 0;
+    html += '<td class="pkg-col-summary">' + (capaMaxTotal ? Number(capaMaxTotal).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (capaMaxAvg ? Number(capaMaxAvg).toLocaleString() : '') + '</td>';
+    html += '</tr>';
+
+    /* 일CAPA 행 */
+    html += '<tr class="pkg-row-capa">';
+    html += '<td>일CAPA</td>';
+    var capaDayTotal = 0;
+    months.forEach(function (m) {
+        var ym = year + '-' + String(m).padStart(2, '0');
+        var val = (packagingData[ym] && packagingData[ym]['일CAPA']) || 0;
+        capaDayTotal += val;
+        html += '<td>' + (val ? Number(val).toLocaleString() : '') + '</td>';
+    });
+    var capaDayAvg = months.length > 0 ? Math.round(capaDayTotal / months.length) : 0;
+    html += '<td class="pkg-col-summary">' + (capaDayTotal ? Number(capaDayTotal).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (capaDayAvg ? Number(capaDayAvg).toLocaleString() : '') + '</td>';
+    html += '</tr>';
+
     /* 가동율 행 */
     html += '<tr class="pkg-row-rate">';
     html += '<td>가동율</td>';
