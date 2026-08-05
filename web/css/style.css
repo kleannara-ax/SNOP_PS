@@ -8226,12 +8226,6 @@ td.number {
     margin: 0 0 14px;
     font-size: 0.78rem;
     color: #94a3b8;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.pkg-unit {
-    color: #94a3b8;
 }
 
 /* 화이트 카드 배경 */
