@@ -8199,6 +8199,22 @@ td.number {
 
 /* ── 원지포장 ── */
 
+/* 2컬럼 레이아웃 */
+.pkg-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+.pkg-card-left {
+    flex: 1;
+    min-width: 0;
+}
+.pkg-card-right {
+    width: 340px;
+    flex-shrink: 0;
+    min-height: 200px;
+}
+
 /* 화이트 카드 배경 */
 .pkg-card {
     background: #ffffff;
