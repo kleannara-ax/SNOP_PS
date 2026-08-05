@@ -1381,6 +1381,21 @@ def api_slitter_subulbu_work_save():
 
 
 ## ══════════════════════════════════════════════════
+##  원지포장 실적 데이터 로드
+## ══════════════════════════════════════════════════
+PKG_DATA_FILE = os.path.join(DATA_DIR, 'packaging_data.json')
+
+@app.route('/api/packaging/data/load', methods=['GET'])
+def api_packaging_data_load():
+    """원지포장 월별 지관별 실적 데이터 로드"""
+    if os.path.exists(PKG_DATA_FILE):
+        with open(PKG_DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    else:
+        data = {}
+    return jsonify({'success': True, 'data': data})
+
+## ══════════════════════════════════════════════════
 ##  원지포장 일CAPA 저장/로드
 ## ══════════════════════════════════════════════════
 PKG_CAPA_FILE = os.path.join(DATA_DIR, 'packaging_capa.json')
