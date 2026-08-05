@@ -446,6 +446,9 @@ function init() {
     /* 슬리터 외주 진행 내역 초기화 */
     initOutsource();
 
+    /* 원지포장 월별 요약 초기화 */
+    initPackaging();
+
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
 
@@ -3967,6 +3970,112 @@ function initSlitterDetail() {
 /* initSlitterCalc — 하위 호환용 (init에서 호출됨) */
 function initSlitterCalc() {
     initSlitterDetail();
+}
+
+/* ══════════════════════════════════════════════
+   원지포장 월별 요약 테이블
+   ══════════════════════════════════════════════ */
+
+/**
+ * 원지포장 I/F 데이터 (월별, 인치별)
+ * 구조: { '2026-01': { '3인치': 0, '6인치': 0, '12인치': 0 }, ... }
+ * 향후 I/F 연동 시 이 객체에 값이 채워짐
+ */
+var packagingData = {};
+
+/**
+ * 원지포장 요약 테이블 렌더링
+ * - 해당년도 1월 ~ 시스템 당월까지 동적 컬럼 생성
+ * - 3인치 / 6인치 / 12인치 행 + 계(합계) + 가동율
+ * - 총계 = 월별 합산, 평균 = 총계 / 월수
+ */
+function renderPackagingSummary() {
+    var thead = document.getElementById('pkg-summary-thead');
+    var tbody = document.getElementById('pkg-summary-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = now.getFullYear();
+    var currentMonth = now.getMonth() + 1; // 1~12
+
+    var rows = ['3인치', '6인치', '12인치'];
+    var months = [];
+    for (var m = 1; m <= currentMonth; m++) {
+        months.push(m);
+    }
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '<th>총계</th><th>평균</th></tr>';
+    thead.innerHTML = thRow;
+
+    /* ── tbody ── */
+    var html = '';
+
+    /* 3인치 / 6인치 / 12인치 행 */
+    rows.forEach(function (rowName) {
+        html += '<tr>';
+        html += '<td>' + rowName + '</td>';
+        var total = 0;
+        var count = 0;
+        months.forEach(function (m) {
+            var ym = year + '-' + String(m).padStart(2, '0');
+            var val = (packagingData[ym] && packagingData[ym][rowName]) || 0;
+            total += val;
+            if (val !== 0) count++;
+            var display = val ? Number(val).toLocaleString() : '';
+            html += '<td class="pkg-data-cell">' + display + '</td>';
+        });
+        var avg = months.length > 0 ? Math.round(total / months.length) : 0;
+        html += '<td class="pkg-col-summary">' + (total ? Number(total).toLocaleString() : '') + '</td>';
+        html += '<td class="pkg-col-summary">' + (avg ? Number(avg).toLocaleString() : '') + '</td>';
+        html += '</tr>';
+    });
+
+    /* 계 행 */
+    html += '<tr class="pkg-row-total">';
+    html += '<td>계</td>';
+    var grandTotal = 0;
+    months.forEach(function (m) {
+        var ym = year + '-' + String(m).padStart(2, '0');
+        var colSum = 0;
+        rows.forEach(function (r) {
+            colSum += (packagingData[ym] && packagingData[ym][r]) || 0;
+        });
+        grandTotal += colSum;
+        html += '<td>' + (colSum ? Number(colSum).toLocaleString() : '') + '</td>';
+    });
+    var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
+    html += '<td class="pkg-col-summary">' + (grandTotal ? Number(grandTotal).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg).toLocaleString() : '') + '</td>';
+    html += '</tr>';
+
+    /* 가동율 행 */
+    html += '<tr class="pkg-row-rate">';
+    html += '<td>가동율</td>';
+    months.forEach(function () {
+        html += '<td></td>'; /* 산식 추후 지정 */
+    });
+    html += '<td class="pkg-col-summary"></td>';
+    html += '<td class="pkg-col-summary"></td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 원지포장 I/F 데이터 로드 (향후 서버 API 연동)
+ * 현재는 빈 데이터로 테이블만 렌더링
+ */
+function loadPackagingData() {
+    /* TODO: I/F 연동 시 fetch('/api/packaging/...') → packagingData 갱신 */
+    packagingData = {};
+    renderPackagingSummary();
+}
+
+function initPackaging() {
+    loadPackagingData();
 }
 
 /* ── 앱 시작 ── */

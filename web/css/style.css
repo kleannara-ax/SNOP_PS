@@ -8196,3 +8196,65 @@ td.number {
 .outsource-row-total .outsource-sum-cell {
     font-weight: 800;
 }
+
+/* ── 원지포장 요약 테이블 ── */
+.pkg-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.pkg-summary-table th,
+.pkg-summary-table td {
+    border: 1px solid #d1d5db;
+    padding: 8px 12px;
+    text-align: right;
+    white-space: nowrap;
+}
+.pkg-summary-table thead th {
+    background: #e8ecf1;
+    color: #1e293b;
+    font-weight: 700;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.pkg-summary-table th:first-child,
+.pkg-summary-table td:first-child {
+    text-align: center;
+    font-weight: 700;
+    background: #f1f5f9;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+.pkg-summary-table thead th:first-child { z-index: 3; }
+/* 데이터 셀 (3인치/6인치/12인치 월별) - I/F 영역 */
+.pkg-summary-table .pkg-data-cell {
+    background: #fff8e6;
+}
+/* 계 행 */
+.pkg-summary-table .pkg-row-total td {
+    background: #e8ecf1;
+    font-weight: 700;
+}
+.pkg-summary-table .pkg-row-total td:first-child {
+    background: #dce3ec;
+}
+/* 가동율 행 */
+.pkg-summary-table .pkg-row-rate td {
+    background: #e8ecf1;
+    font-weight: 600;
+}
+.pkg-summary-table .pkg-row-rate td:first-child {
+    background: #dce3ec;
+}
+/* 총계·평균 컬럼 */
+.pkg-summary-table .pkg-col-summary {
+    background: #e8ecf1;
+    font-weight: 700;
+}
+.pkg-summary-table .pkg-row-total .pkg-col-summary {
+    background: #dce3ec;
+    font-weight: 800;
+}
