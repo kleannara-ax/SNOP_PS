@@ -8215,6 +8215,14 @@ td.number {
     min-height: 200px;
 }
 
+/* 카드 제목 */
+.pkg-card-title {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
 /* 화이트 카드 배경 */
 .pkg-card {
     background: #ffffff;
