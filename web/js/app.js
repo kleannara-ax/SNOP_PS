@@ -4038,22 +4038,25 @@ function renderPackagingSummary() {
         html += '</tr>';
     });
 
-    /* 계 행 */
+    /* 계 행 — 월별 합계를 배열에 보관 (가동율 계산용) */
+    var monthlyTotals = {};
     html += '<tr class="pkg-row-total">';
     html += '<td>계</td>';
     var grandTotal = 0;
     months.forEach(function (m) {
-        var ym = year + '-' + String(m).padStart(2, '0');
+        var mm = String(m).padStart(2, '0');
+        var ym = year + '-' + mm;
         var colSum = 0;
         rows.forEach(function (r) {
             colSum += (packagingData[ym] && packagingData[ym][r]) || 0;
         });
+        monthlyTotals[mm] = colSum;
         grandTotal += colSum;
-        html += '<td>' + (colSum ? Number(colSum).toLocaleString() : '') + '</td>';
+        html += '<td id="pkg-total-' + mm + '">' + (colSum ? Number(colSum).toLocaleString() : '') + '</td>';
     });
     var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
-    html += '<td class="pkg-col-summary">' + (grandTotal ? Number(grandTotal).toLocaleString() : '') + '</td>';
-    html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary" id="pkg-total-sum">' + (grandTotal ? Number(grandTotal).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary" id="pkg-total-avg">' + (grandAvg ? Number(grandAvg).toLocaleString() : '') + '</td>';
     html += '</tr>';
 
     /* 최대CAPA 행 — 해당월 일수 × 일CAPA (자동계산) */
@@ -4090,14 +4093,29 @@ function renderPackagingSummary() {
     html += '<td class="pkg-col-summary" id="pkg-day-capa-avg">' + (capaDayAvg ? Number(capaDayAvg).toLocaleString() : '') + '</td>';
     html += '</tr>';
 
-    /* 가동율 행 */
+    /* 가동율 행 — (계 / 최대CAPA) × 100 */
     html += '<tr class="pkg-row-rate">';
     html += '<td>가동율</td>';
-    months.forEach(function () {
-        html += '<td></td>'; /* 산식 추후 지정 */
+    var rateSum = 0;
+    var rateCnt = 0;
+    months.forEach(function (m) {
+        var mm = String(m).padStart(2, '0');
+        var total = monthlyTotals[mm] || 0;
+        var dailyCapa = parseFloat(pkgCapaData[mm]) || 0;
+        var days = getDaysInMonth(year, m);
+        var maxCapa = Math.round(dailyCapa * days);
+        var rate = '';
+        if (maxCapa > 0) {
+            var r = (total / maxCapa) * 100;
+            rate = r.toFixed(1) + '%';
+            rateSum += r;
+            rateCnt++;
+        }
+        html += '<td id="pkg-rate-' + mm + '">' + rate + '</td>';
     });
-    html += '<td class="pkg-col-summary"></td>';
-    html += '<td class="pkg-col-summary"></td>';
+    var rateAvg = rateCnt > 0 ? (rateSum / rateCnt).toFixed(1) + '%' : '';
+    html += '<td class="pkg-col-summary" id="pkg-rate-total"></td>';
+    html += '<td class="pkg-col-summary" id="pkg-rate-avg">' + rateAvg + '</td>';
     html += '</tr>';
 
     tbody.innerHTML = html;
@@ -4124,7 +4142,7 @@ function bindPkgCapaInputs() {
     });
 }
 
-/** 최대CAPA 행 + 총계/평균 재계산 (DOM 직접 갱신, 전체 리렌더 없이) */
+/** 최대CAPA + 가동율 재계산 (DOM 직접 갱신, 전체 리렌더 없이) */
 function recalcPkgMaxCapa() {
     var now = new Date();
     var year = now.getFullYear();
@@ -4132,6 +4150,8 @@ function recalcPkgMaxCapa() {
 
     var capaMaxTotal = 0;
     var capaDayTotal = 0;
+    var rateSum = 0;
+    var rateCnt = 0;
     var months = [];
     for (var m = 1; m <= currentMonth; m++) months.push(m);
 
@@ -4145,20 +4165,38 @@ function recalcPkgMaxCapa() {
 
         var cell = document.getElementById('pkg-max-capa-' + mm);
         if (cell) cell.textContent = maxVal ? Number(maxVal).toLocaleString() : '';
+
+        /* 가동율 재계산: (계 / 최대CAPA) × 100 */
+        var rateCell = document.getElementById('pkg-rate-' + mm);
+        if (rateCell) {
+            var totalCell = document.getElementById('pkg-total-' + mm);
+            var totalVal = totalCell ? parseFloat(totalCell.textContent.replace(/,/g, '')) || 0 : 0;
+            if (maxVal > 0) {
+                var r = (totalVal / maxVal) * 100;
+                rateCell.textContent = r.toFixed(1) + '%';
+                rateSum += r;
+                rateCnt++;
+            } else {
+                rateCell.textContent = '';
+            }
+        }
     });
 
     var capaMaxAvg = months.length > 0 ? Math.round(capaMaxTotal / months.length) : 0;
     var capaDayAvg = months.length > 0 ? Math.round(capaDayTotal / months.length) : 0;
+    var rateAvg = rateCnt > 0 ? (rateSum / rateCnt).toFixed(1) + '%' : '';
 
     var elMaxTotal = document.getElementById('pkg-max-capa-total');
     var elMaxAvg = document.getElementById('pkg-max-capa-avg');
     var elDayTotal = document.getElementById('pkg-day-capa-total');
     var elDayAvg = document.getElementById('pkg-day-capa-avg');
+    var elRateAvg = document.getElementById('pkg-rate-avg');
 
     if (elMaxTotal) elMaxTotal.textContent = capaMaxTotal ? Number(capaMaxTotal).toLocaleString() : '';
     if (elMaxAvg) elMaxAvg.textContent = capaMaxAvg ? Number(capaMaxAvg).toLocaleString() : '';
     if (elDayTotal) elDayTotal.textContent = capaDayTotal ? Number(capaDayTotal).toLocaleString() : '';
     if (elDayAvg) elDayAvg.textContent = capaDayAvg ? Number(capaDayAvg).toLocaleString() : '';
+    if (elRateAvg) elRateAvg.textContent = rateAvg;
 }
 
 /** 일CAPA 서버 저장 */
