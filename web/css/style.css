@@ -8197,64 +8197,113 @@ td.number {
     font-weight: 800;
 }
 
-/* ── 원지포장 요약 테이블 ── */
+/* ── 원지포장 ── */
+
+/* 화이트 카드 배경 */
+.pkg-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    padding: 28px 32px;
+}
+.pkg-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e9ecf2;
+}
+
+/* 테이블 기본 */
 .pkg-summary-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    color: #334155;
 }
 .pkg-summary-table th,
 .pkg-summary-table td {
-    border: 1px solid #d1d5db;
-    padding: 8px 12px;
-    text-align: right;
+    padding: 13px 18px;
+    text-align: center;
     white-space: nowrap;
+    border: none;
+    border-bottom: 1px solid #eef0f4;
 }
+
+/* thead */
 .pkg-summary-table thead th {
-    background: #e8ecf1;
-    color: #1e293b;
-    font-weight: 700;
-    text-align: center;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-.pkg-summary-table th:first-child,
-.pkg-summary-table td:first-child {
-    text-align: center;
-    font-weight: 700;
-    background: #f1f5f9;
-    position: sticky;
-    left: 0;
-    z-index: 1;
-}
-.pkg-summary-table thead th:first-child { z-index: 3; }
-/* 데이터 셀 (3인치/6인치/12인치 월별) - I/F 영역 */
-.pkg-summary-table .pkg-data-cell {
-    background: #fff8e6;
-}
-/* 계 행 */
-.pkg-summary-table .pkg-row-total td {
-    background: #e8ecf1;
-    font-weight: 700;
-}
-.pkg-summary-table .pkg-row-total td:first-child {
-    background: #dce3ec;
-}
-/* 가동율 행 */
-.pkg-summary-table .pkg-row-rate td {
-    background: #e8ecf1;
+    background: #f5f7fb;
+    color: #475569;
     font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid #dfe3ea;
 }
-.pkg-summary-table .pkg-row-rate td:first-child {
-    background: #dce3ec;
+.pkg-summary-table thead th:first-child {
+    border-radius: 10px 0 0 0;
 }
+.pkg-summary-table thead th:last-child {
+    border-radius: 0 10px 0 0;
+}
+
+/* 구분 컬럼 (첫 번째 열) */
+.pkg-summary-table td:first-child {
+    font-weight: 600;
+    color: #1e293b;
+    background: #fafbfd;
+}
+
+/* 데이터 셀 (월별 I/F 영역) */
+.pkg-summary-table .pkg-data-cell {
+    background: #fffcf0;
+    color: #334155;
+    font-weight: 500;
+}
+
 /* 총계·평균 컬럼 */
 .pkg-summary-table .pkg-col-summary {
-    background: #e8ecf1;
+    background: #f5f7fb;
     font-weight: 700;
+    color: #1e293b;
+}
+
+/* 계 행 */
+.pkg-summary-table .pkg-row-total td {
+    background: #edf2f8;
+    font-weight: 700;
+    color: #2563eb;
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+}
+.pkg-summary-table .pkg-row-total td:first-child {
+    color: #2563eb;
+    background: #e8eff8;
 }
 .pkg-summary-table .pkg-row-total .pkg-col-summary {
-    background: #dce3ec;
+    background: #e0eaf5;
+    color: #1d4ed8;
     font-weight: 800;
+}
+
+/* 가동율 행 */
+.pkg-summary-table .pkg-row-rate td {
+    background: #fafbfd;
+    font-weight: 500;
+    color: #64748b;
+}
+.pkg-summary-table .pkg-row-rate td:first-child {
+    font-weight: 600;
+    color: #475569;
+}
+
+/* 마지막 행 하단 border 제거 */
+.pkg-summary-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* hover */
+.pkg-summary-table tbody tr:not(.pkg-row-total):not(.pkg-row-rate):hover td {
+    background: #f0f4ff;
+    transition: background 0.15s;
+}
+.pkg-summary-table tbody tr:not(.pkg-row-total):not(.pkg-row-rate):hover td:first-child {
+    background: #e8eeff;
 }
