@@ -3320,6 +3320,7 @@ function initOutsource() {
    ══════════════════════════════════════════════ */
 var slitterDetailState = {
     yearMonth: '',
+    selectedDate: '', // 시스템 일자 기본
     rows: [],
     hasChanges: false,
 };
@@ -3333,12 +3334,19 @@ function renderSlitterDetailTable() {
     var tfoot = document.getElementById('slitter-tfoot');
     if (!tbody) return;
 
-    var rows = slitterDetailState.rows || [];
+    var allRows = slitterDetailState.rows || [];
     tbody.innerHTML = '';
     if (tfoot) tfoot.innerHTML = '';
 
+    /* 선택된 날짜로 필터링 */
+    var filterDate = slitterDetailState.selectedDate || '';
+    var rows = filterDate
+        ? allRows.filter(function (r) { return r.date === filterDate; })
+        : allRows;
+
     if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="slitter-empty-msg">데이터 없음</td></tr>';
+        var msg = filterDate ? (filterDate + ' 데이터 없음') : '데이터 없음';
+        tbody.innerHTML = '<tr><td colspan="5" class="slitter-empty-msg">' + msg + '</td></tr>';
         return;
     }
 
@@ -3934,20 +3942,30 @@ function saveSlitterDetail() {
  * 슬리터 일자별 상세 내역 초기화
  */
 function initSlitterDetail() {
-    /* 월 선택기 초기값 = 시스템 현재 월 */
-    var monthInput = document.getElementById('slitter-detail-month');
-    if (monthInput) {
+    /* 날짜 선택기 초기값 = 시스템 현재 일자 */
+    var dateInput = document.getElementById('slitter-detail-date');
+    if (dateInput) {
         var now = new Date();
+        var currentDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         var currentYM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-        monthInput.value = currentYM;
+        dateInput.value = currentDate;
         slitterDetailState.yearMonth = currentYM;
+        slitterDetailState.selectedDate = currentDate;
 
-        /* 월 변경 이벤트 */
-        monthInput.addEventListener('change', function () {
+        /* 날짜 변경 이벤트 */
+        dateInput.addEventListener('change', function () {
             var val = this.value;
             if (!val) return;
-            slitterDetailState.yearMonth = val;
-            loadSlitterDetail();
+            var newYM = val.substring(0, 7); // "2026-08-05" → "2026-08"
+            slitterDetailState.selectedDate = val;
+            if (newYM !== slitterDetailState.yearMonth) {
+                /* 월이 바뀌면 데이터 다시 로드 */
+                slitterDetailState.yearMonth = newYM;
+                loadSlitterDetail();
+            } else {
+                /* 같은 월이면 필터만 재적용 */
+                renderSlitterDetailTable();
+            }
         });
     }
 
