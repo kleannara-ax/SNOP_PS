@@ -4204,6 +4204,35 @@ function renderPkgRateChart() {
                             return ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—';
                         }
                     }
+                },
+                annotation: {
+                    annotations: {
+                        dangerZone: {
+                            type: 'box',
+                            yMin: 0,
+                            yMax: 50,
+                            backgroundColor: 'rgba(220,38,38,0.07)',
+                            borderWidth: 0
+                        },
+                        targetLine: {
+                            type: 'line',
+                            yMin: 50,
+                            yMax: 50,
+                            borderColor: 'rgba(220,38,38,0.45)',
+                            borderWidth: 1.5,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: '목표 50%',
+                                position: 'end',
+                                backgroundColor: 'rgba(220,38,38,0.85)',
+                                color: '#fff',
+                                font: { size: 10, weight: '600' },
+                                padding: { top: 2, bottom: 2, left: 6, right: 6 },
+                                borderRadius: 4
+                            }
+                        }
+                    }
                 }
             },
             scales: {
