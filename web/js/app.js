@@ -4105,17 +4105,20 @@ function renderPackagingSummary() {
         var days = getDaysInMonth(year, m);
         var maxCapa = Math.round(dailyCapa * days);
         var rate = '';
+        var rClass = '';
         if (maxCapa > 0) {
             var r = (total / maxCapa) * 100;
             rate = r.toFixed(1) + '%';
             rateSum += r;
             rateCnt++;
+            if (r <= 50) rClass = ' pkg-rate-low';
         }
-        html += '<td id="pkg-rate-' + mm + '">' + rate + '</td>';
+        html += '<td id="pkg-rate-' + mm + '" class="' + rClass + '">' + rate + '</td>';
     });
     var rateAvg = rateCnt > 0 ? (rateSum / rateCnt).toFixed(1) + '%' : '';
+    var rateAvgNum = rateCnt > 0 ? rateSum / rateCnt : -1;
     html += '<td class="pkg-col-summary" id="pkg-rate-total"></td>';
-    html += '<td class="pkg-col-summary" id="pkg-rate-avg">' + rateAvg + '</td>';
+    html += '<td class="pkg-col-summary' + (rateAvgNum >= 0 && rateAvgNum <= 50 ? ' pkg-rate-low' : '') + '" id="pkg-rate-avg">' + rateAvg + '</td>';
     html += '</tr>';
 
     tbody.innerHTML = html;
@@ -4274,10 +4277,12 @@ function recalcPkgMaxCapa() {
             if (maxVal > 0) {
                 var r = (totalVal / maxVal) * 100;
                 rateCell.textContent = r.toFixed(1) + '%';
+                rateCell.classList.toggle('pkg-rate-low', r <= 50);
                 rateSum += r;
                 rateCnt++;
             } else {
                 rateCell.textContent = '';
+                rateCell.classList.remove('pkg-rate-low');
             }
         }
     });
@@ -4296,7 +4301,11 @@ function recalcPkgMaxCapa() {
     if (elMaxAvg) elMaxAvg.textContent = capaMaxAvg ? Number(capaMaxAvg).toLocaleString() : '';
     if (elDayTotal) elDayTotal.textContent = capaDayTotal ? Number(capaDayTotal).toLocaleString() : '';
     if (elDayAvg) elDayAvg.textContent = capaDayAvg ? Number(capaDayAvg).toLocaleString() : '';
-    if (elRateAvg) elRateAvg.textContent = rateAvg;
+    if (elRateAvg) {
+        elRateAvg.textContent = rateAvg;
+        var avgNum = rateCnt > 0 ? rateSum / rateCnt : -1;
+        elRateAvg.classList.toggle('pkg-rate-low', avgNum >= 0 && avgNum <= 50);
+    }
 
     /* 가동율 차트 동기화 */
     renderPkgRateChart();
