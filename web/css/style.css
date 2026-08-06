@@ -8213,6 +8213,13 @@ td.number {
     flex: 1;
     min-width: 0;
     min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+.pkg-chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 280px;
 }
 
 /* 카드 제목 */

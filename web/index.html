@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260805n">
+    <link rel="stylesheet" href="css/style.css?v=20260806a">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -995,9 +995,12 @@
                         </table>
                     </div>
                 </div>
-                <!-- 오른쪽: 추가 정보 카드 -->
+                <!-- 오른쪽: 가동율 추이 차트 -->
                 <div class="pkg-card pkg-card-right">
-                    <div id="pkg-right-content">
+                    <h3 class="pkg-card-title">월별 가동율 추이</h3>
+                    <p class="pkg-card-sub">단위 : %</p>
+                    <div class="pkg-chart-wrap">
+                        <canvas id="pkg-rate-chart"></canvas>
                     </div>
                 </div>
             </div>
@@ -1466,6 +1469,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260805n"></script>
+<script src="js/app.js?v=20260806a"></script>
 </body>
 </html>
