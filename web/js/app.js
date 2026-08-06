@@ -4122,6 +4122,106 @@ function renderPackagingSummary() {
 
     /* 일CAPA input 이벤트 바인딩 */
     bindPkgCapaInputs();
+
+    /* 가동율 차트 렌더링 */
+    renderPkgRateChart();
+}
+
+/* ── 가동율 꺾은선 차트 (Chart.js) ── */
+var pkgRateChart = null;
+
+function renderPkgRateChart() {
+    var canvas = document.getElementById('pkg-rate-chart');
+    if (!canvas) return;
+
+    var now = new Date();
+    var year = now.getFullYear();
+    var currentMonth = now.getMonth() + 1;
+
+    var labels = [];
+    var dataArr = [];
+    var rows = ['3인치', '6인치', '12인치'];
+
+    for (var m = 1; m <= currentMonth; m++) {
+        var mm = String(m).padStart(2, '0');
+        labels.push(m + '월');
+
+        var ym = year + '-' + mm;
+        var total = 0;
+        rows.forEach(function (r) {
+            total += (packagingData[ym] && packagingData[ym][r]) || 0;
+        });
+
+        var dailyCapa = parseFloat(pkgCapaData[mm]) || 0;
+        var days = getDaysInMonth(year, m);
+        var maxCapa = Math.round(dailyCapa * days);
+        var rate = maxCapa > 0 ? parseFloat(((total / maxCapa) * 100).toFixed(1)) : null;
+        dataArr.push(rate);
+    }
+
+    if (pkgRateChart) {
+        pkgRateChart.data.labels = labels;
+        pkgRateChart.data.datasets[0].data = dataArr;
+        pkgRateChart.update();
+        return;
+    }
+
+    pkgRateChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '가동율 (%)',
+                data: dataArr,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,0.08)',
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                borderWidth: 2.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 13, weight: '600' },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 }, color: '#64748b' }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        stepSize: 20,
+                        font: { size: 11 },
+                        color: '#64748b',
+                        callback: function (v) { return v + '%'; }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
 }
 
 /** 일CAPA 입력 변경 시 → 최대CAPA 재계산 + 자동저장 */
@@ -4197,6 +4297,9 @@ function recalcPkgMaxCapa() {
     if (elDayTotal) elDayTotal.textContent = capaDayTotal ? Number(capaDayTotal).toLocaleString() : '';
     if (elDayAvg) elDayAvg.textContent = capaDayAvg ? Number(capaDayAvg).toLocaleString() : '';
     if (elRateAvg) elRateAvg.textContent = rateAvg;
+
+    /* 가동율 차트 동기화 */
+    renderPkgRateChart();
 }
 
 /** 일CAPA 서버 저장 */
