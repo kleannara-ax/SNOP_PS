@@ -314,6 +314,11 @@ main {
     color: #1e293b;
     margin: 0;
 }
+.slitter-date-desc-text {
+    margin: 0 0 12px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
 .slitter-note {
     margin: 16px 0 0;
     font-size: 0.82rem;
