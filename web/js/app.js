@@ -4446,8 +4446,8 @@ function renderPkgDailyTable() {
     if (dailyLabel) dailyLabel.textContent = year + '년 ' + month + '월';
     var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-    /* ── thead: 1행 — 일자 + (요일) ── */
-    var thRow = '<tr><th class="pkd-month-head">' + month + '월</th>';
+    /* ── thead: 1행 — 구분 + 일자 + (요일) ── */
+    var thRow = '<tr><th class="pkd-month-head"></th><th class="pkd-month-head">' + month + '월</th>';
     for (var d = 1; d <= daysInMonth; d++) {
         var dt = new Date(year, month - 1, d);
         var dow = dt.getDay(); // 0=일
