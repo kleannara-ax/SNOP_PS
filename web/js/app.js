@@ -4429,16 +4429,21 @@ function loadPackagingData() {
 
 /* ── 일자별 실적량 테이블 ── */
 var pkgDailyData = {}; // { "2026-08-01": { "포장실적_내수": 0, "포장실적_수출": 0, "포장대기_내수": 0, "포장대기_수출": 0 } }
+var pkgDailyYear = new Date().getFullYear();
+var pkgDailyMonth = new Date().getMonth() + 1;
 
 function renderPkgDailyTable() {
     var thead = document.getElementById('pkg-daily-thead');
     var tbody = document.getElementById('pkg-daily-tbody');
     if (!thead || !tbody) return;
 
-    var now = new Date();
-    var year = now.getFullYear();
-    var month = now.getMonth() + 1;
+    var year = pkgDailyYear;
+    var month = pkgDailyMonth;
     var daysInMonth = getDaysInMonth(year, month);
+
+    /* 라벨 갱신 */
+    var dailyLabel = document.getElementById('pkg-daily-date-label');
+    if (dailyLabel) dailyLabel.textContent = year + '년 ' + month + '월';
     var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
     /* ── thead: 1행 — 일자 + (요일) ── */
@@ -4507,10 +4512,6 @@ function initPackaging() {
     var dateLabel = document.getElementById('pkg-date-label');
     if (dateLabel) dateLabel.textContent = monthDay;
 
-    /* 일자별 실적량 라벨 */
-    var dailyLabel = document.getElementById('pkg-daily-date-label');
-    if (dailyLabel) dailyLabel.textContent = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
-
     /* 년도 선택 필터 초기화 */
     var yearSelect = document.getElementById('pkg-year-filter');
     if (yearSelect) {
@@ -4528,6 +4529,30 @@ function initPackaging() {
             loadPkgCapa(function () {
                 renderPackagingSummary();
             });
+        });
+    }
+
+    /* 일자별 실적량 — 월 선택 필터 초기화 */
+    var monthFilter = document.getElementById('pkg-daily-month-filter');
+    if (monthFilter) {
+        var curY = now.getFullYear();
+        var curM = now.getMonth() + 1;
+        /* 최근 12개월 옵션 생성 (현재월 → 과거 11개월) */
+        for (var i = 0; i < 12; i++) {
+            var ym = curM - i;
+            var yy = curY;
+            if (ym <= 0) { ym += 12; yy--; }
+            var opt = document.createElement('option');
+            opt.value = yy + '-' + String(ym).padStart(2, '0');
+            opt.textContent = yy + '년 ' + ym + '월';
+            if (yy === pkgDailyYear && ym === pkgDailyMonth) opt.selected = true;
+            monthFilter.appendChild(opt);
+        }
+        monthFilter.addEventListener('change', function () {
+            var parts = this.value.split('-');
+            pkgDailyYear = parseInt(parts[0]);
+            pkgDailyMonth = parseInt(parts[1]);
+            renderPkgDailyTable();
         });
     }
 
