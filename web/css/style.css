@@ -8227,6 +8227,13 @@ td.number {
     min-height: 280px;
 }
 
+/* 카드 헤더 (제목 + 필터) */
+.pkg-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0;
+}
 /* 카드 제목 */
 .pkg-card-title {
     margin: 0 0 4px;
@@ -8238,6 +8245,26 @@ td.number {
     margin: 0 0 14px;
     font-size: 0.78rem;
     color: #94a3b8;
+}
+/* 년도 선택 필터 */
+.pkg-year-select {
+    padding: 5px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    background: #f8fafc;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.pkg-year-select:hover {
+    border-color: #94a3b8;
+}
+.pkg-year-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
 }
 
 /* 화이트 카드 배경 */
