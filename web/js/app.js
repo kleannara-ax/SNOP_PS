@@ -4397,15 +4397,29 @@ function loadPkgCapa(callback) {
  * 현재는 빈 데이터로 테이블만 렌더링
  */
 function loadPackagingData() {
-    /* 실적 데이터 + 일CAPA 병렬 로드 후 테이블 렌더링 */
+    /* 실적 데이터 + 일CAPA + 일자별 실적 병렬 로드 후 테이블 렌더링 */
     var done = 0;
-    var total = 2;
-    function check() { if (++done >= total) renderPackagingSummary(); }
+    var total = 3;
+    function check() {
+        if (++done >= total) {
+            renderPackagingSummary();
+            renderPkgDailyTable();
+        }
+    }
 
     fetch('/api/packaging/data/load')
         .then(function (r) { return r.json(); })
         .then(function (res) {
             if (res.success && res.data) packagingData = res.data;
+            check();
+        })
+        .catch(function () { check(); });
+
+    /* 일자별 실적 데이터 로드 (포장실적일자별 내수/수출 건수) */
+    fetch('/api/packaging/daily/load')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.success && res.data) pkgDailyData = res.data;
             check();
         })
         .catch(function () { check(); });
@@ -4518,7 +4532,6 @@ function initPackaging() {
     }
 
     loadPackagingData();
-    renderPkgDailyTable();
 }
 
 /* ── 앱 시작 ── */
