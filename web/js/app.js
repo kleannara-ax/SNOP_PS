@@ -3553,12 +3553,20 @@ function renderSlitterDailyChart() {
     if (!canvas) return;
 
     var rows = slitterDetailState.rows || [];
+    var ym = slitterDetailState.yearMonth || '';
+    if (!ym) return;
+
+    var parts = ym.split('-');
+    var year = parseInt(parts[0]);
+    var month = parseInt(parts[1]);
+    var daysInMonth = getDaysInMonth(year, month);
 
     /* ── 일자별 내수/수출 합계 (ton) ── */
     var dailyMap = {};
     rows.forEach(function (r) {
         var date = r.date || '';
         if (!date) return;
+        if (date.substring(0, 7) !== ym) return;
         if (!dailyMap[date]) dailyMap[date] = { domestic: 0, export: 0 };
         if (r.domestic === '내수') {
             dailyMap[date].domestic += (Number(r.weight) || 0);
@@ -3567,29 +3575,30 @@ function renderSlitterDailyChart() {
         }
     });
 
-    var dates = Object.keys(dailyMap).sort();
-    /* 일자 라벨: "7/4", "7/10" 형태 */
-    var labels = dates.map(function (d) {
-        var parts = d.split('-');
-        return Number(parts[1]) + '/' + Number(parts[2]);
-    });
-    var domesticData = dates.map(function (d) {
-        return Math.round(dailyMap[d].domestic / 100) / 10;  /* ton, 소수 1자리 */
-    });
-    var exportData = dates.map(function (d) {
-        return Math.round(dailyMap[d].export / 100) / 10;
-    });
+    /* 1일~말일까지 전체 일자 라벨 생성 */
+    var labels = [];
+    var domesticData = [];
+    var exportData = [];
+    var mm = String(month).padStart(2, '0');
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dd = String(d).padStart(2, '0');
+        var dateKey = year + '-' + mm + '-' + dd;
+        labels.push(month + '/' + d);
+
+        if (dailyMap[dateKey]) {
+            domesticData.push(Math.round(dailyMap[dateKey].domestic / 100) / 10);
+            exportData.push(Math.round(dailyMap[dateKey].export / 100) / 10);
+        } else {
+            domesticData.push(null);
+            exportData.push(null);
+        }
+    }
 
     /* 기존 차트 파기 */
     if (slitterDailyChartInstance) {
         slitterDailyChartInstance.destroy();
         slitterDailyChartInstance = null;
-    }
-
-    if (dates.length === 0) {
-        var ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        return;
     }
 
     slitterDailyChartInstance = new Chart(canvas, {
@@ -4404,6 +4413,7 @@ function loadPackagingData() {
         if (++done >= total) {
             renderPackagingSummary();
             renderPkgDailyTable();
+            renderPkgDailyChart();
         }
     }
 
@@ -4446,8 +4456,8 @@ function renderPkgDailyTable() {
     if (dailyLabel) dailyLabel.textContent = year + '년 ' + month + '월';
     var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-    /* ── thead: 1행 — 구분 + 일자 + (요일) ── */
-    var thRow = '<tr><th class="pkd-month-head"></th><th class="pkd-month-head">' + month + '월</th>';
+    /* ── thead: 1행 — 구분 + 일자 + (요일) — 좌측 2열 sticky ── */
+    var thRow = '<tr><th class="pkd-month-head pkd-sticky-col1"></th><th class="pkd-month-head pkd-sticky-col2">' + month + '월</th>';
     for (var d = 1; d <= daysInMonth; d++) {
         var dt = new Date(year, month - 1, d);
         var dow = dt.getDay(); // 0=일
@@ -4504,6 +4514,142 @@ function renderPkgDailyTable() {
     tbody.innerHTML = html;
 }
 
+/* ── 일자별 실적 추이 꺾은선 차트 (Chart.js) ── */
+var pkgDailyChart = null;
+
+function renderPkgDailyChart() {
+    var canvas = document.getElementById('pkg-daily-chart');
+    if (!canvas) return;
+
+    var year = pkgDailyYear;
+    var month = pkgDailyMonth;
+    var daysInMonth = getDaysInMonth(year, month);
+    var mm = String(month).padStart(2, '0');
+
+    /* 라벨 갱신 */
+    var chartLabel = document.getElementById('pkg-daily-chart-label');
+    if (chartLabel) chartLabel.textContent = year + '년 ' + month + '월';
+
+    var labels = [];
+    var actData = [];   /* 포장실적 계 (내수+수출) */
+    var waitData = [];  /* 포장대기 계 (내수+수출) */
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dd = String(d).padStart(2, '0');
+        var dateKey = year + '-' + mm + '-' + dd;
+        labels.push(d + '일');
+
+        var entry = pkgDailyData[dateKey] || {};
+        var actSum = (entry['포장실적_내수'] || 0) + (entry['포장실적_수출'] || 0);
+        var waitSum = (entry['포장대기_내수'] || 0) + (entry['포장대기_수출'] || 0);
+        actData.push(actSum ? parseFloat(actSum.toFixed(1)) : null);
+        waitData.push(waitSum ? parseFloat(waitSum.toFixed(1)) : null);
+    }
+
+    if (pkgDailyChart) {
+        pkgDailyChart.data.labels = labels;
+        pkgDailyChart.data.datasets[0].data = actData;
+        pkgDailyChart.data.datasets[1].data = waitData;
+        pkgDailyChart.update();
+        return;
+    }
+
+    pkgDailyChart = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '포장실적',
+                    data: actData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.08)',
+                    fill: false,
+                    tension: 0.3,
+                    pointBackgroundColor: '#3b82f6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 2.5,
+                    spanGaps: true
+                },
+                {
+                    label: '포장대기',
+                    data: waitData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245,158,11,0.08)',
+                    fill: false,
+                    tension: 0.3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    borderWidth: 2.5,
+                    spanGaps: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        boxWidth: 8,
+                        padding: 16,
+                        font: { size: 12, weight: '600' },
+                        color: '#334155'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 13, weight: '600' },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            var val = ctx.parsed.y;
+                            if (val === null || val === undefined) return ctx.dataset.label + ': —';
+                            return ctx.dataset.label + ': ' + Number(val).toLocaleString() + ' ton';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { size: 10 },
+                        color: '#64748b',
+                        maxRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#64748b',
+                        callback: function (v) { return Number(v).toLocaleString(); }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+}
+
 function initPackaging() {
     var now = new Date();
     var monthDay = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 기준';
@@ -4553,6 +4699,7 @@ function initPackaging() {
             pkgDailyYear = parseInt(parts[0]);
             pkgDailyMonth = parseInt(parts[1]);
             renderPkgDailyTable();
+            renderPkgDailyChart();
         });
     }
 

@@ -8214,8 +8214,14 @@ td.number {
     flex: 1;
     min-width: 0;
 }
-.pkg-card-right {
+.pkg-right-stack {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.pkg-card-right {
     min-width: 0;
     min-height: 200px;
     display: flex;
@@ -8278,18 +8284,20 @@ td.number {
     overflow-x: auto;
     border-radius: 10px;
     border: 1px solid #e9ecf2;
+    position: relative;
 }
 
 /* 테이블 기본 */
 .pkg-summary-table {
-    width: 100%;
-    border-collapse: collapse;
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.82rem;
     color: #334155;
 }
 .pkg-summary-table th,
 .pkg-summary-table td {
-    padding: 13px 18px;
+    padding: 10px 6px;
     text-align: center;
     white-space: nowrap;
     border: none;
@@ -8306,16 +8314,39 @@ td.number {
 }
 .pkg-summary-table thead th:first-child {
     border-radius: 10px 0 0 0;
+    position: sticky;
+    left: 0;
+    z-index: 12;
+    background: #f5f7fb;
+}
+.pkg-summary-table thead th:first-child::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -4px;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.05), transparent);
+    pointer-events: none;
 }
 .pkg-summary-table thead th:last-child {
     border-radius: 0 10px 0 0;
 }
 
-/* 구분 컬럼 (첫 번째 열) */
+/* 구분 컬럼 (첫 번째 열) — 좌측 틀고정 */
 .pkg-summary-table td:first-child {
     font-weight: 600;
     color: #1e293b;
     background: #fafbfd;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+.pkg-summary-table td:first-child::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -4px;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.05), transparent);
+    pointer-events: none;
 }
 
 /* 데이터 셀 (월별 I/F 영역) */
@@ -8343,6 +8374,9 @@ td.number {
 .pkg-summary-table .pkg-row-total td:first-child {
     color: #2563eb;
     background: #e8eff8;
+    position: sticky;
+    left: 0;
+    z-index: 5;
 }
 .pkg-summary-table .pkg-row-total .pkg-col-summary {
     background: #e0eaf5;
@@ -8359,6 +8393,10 @@ td.number {
 .pkg-summary-table .pkg-row-capa td:first-child {
     font-weight: 600;
     color: #334155;
+    background: #f8fafc;
+    position: sticky;
+    left: 0;
+    z-index: 5;
 }
 /* 일CAPA 입력 셀 — 모든 상태에서 테두리/외곽선 완전 제거 */
 .pkg-summary-table .pkg-input-cell {
@@ -8368,7 +8406,7 @@ td.number {
 .pkg-capa-input {
     width: 100%;
     height: 100%;
-    padding: 13px 18px;
+    padding: 10px 8px;
     text-align: center;
     font-size: 0.82rem;
     color: #475569;
@@ -8411,6 +8449,10 @@ td.number {
 .pkg-summary-table .pkg-row-rate td:first-child {
     font-weight: 600;
     color: #475569;
+    background: #fafbfd;
+    position: sticky;
+    left: 0;
+    z-index: 5;
 }
 /* 가동율 50% 이하 빨간색 */
 .pkg-summary-table .pkg-rate-low {
@@ -8430,6 +8472,14 @@ td.number {
 }
 .pkg-summary-table tbody tr:not(.pkg-row-total):not(.pkg-row-rate):hover td:first-child {
     background: #e8eeff;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+
+/* ── 일자별 실적 추이 차트 (오른쪽 스택 내부) ── */
+.pkg-card-daily-chart {
+    margin-top: 0;
 }
 
 /* ── 일자별 실적량 테이블 (캡처 기반 미니멀 디자인) ── */
@@ -8438,19 +8488,23 @@ td.number {
 }
 .pkg-daily-table-wrap {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 380px;
     border-radius: 10px;
+    position: relative;
 }
 .pkg-daily-table {
     width: max-content;
     min-width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.82rem;
     white-space: nowrap;
 }
 
-/* ── thead ── */
+/* ── thead (상단 틀고정) ── */
 .pkg-daily-table thead th {
-    background: transparent;
+    background: #ffffff;
     color: #334155;
     font-weight: 600;
     padding: 10px 12px;
@@ -8459,6 +8513,32 @@ td.number {
     border-bottom: 1px solid #e2e8f0;
     font-size: 0.8rem;
     line-height: 1.4;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+/* thead 좌측 고정 열 (카테고리th + 구분th) — 좌상단 교차 */
+.pkg-daily-table thead th.pkd-sticky-col1 {
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    min-width: 72px;
+    background: #ffffff;
+}
+.pkg-daily-table thead th.pkd-sticky-col2 {
+    position: sticky;
+    left: 72px;
+    z-index: 30;
+    min-width: 52px;
+    background: #ffffff;
+}
+.pkg-daily-table thead th.pkd-sticky-col2::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -4px;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.04), transparent);
+    pointer-events: none;
 }
 .pkg-daily-table thead th.pkd-day-head {
     min-width: 72px;
@@ -8495,21 +8575,28 @@ td.number {
     color: #334155;
 }
 
-/* 카테고리 셀 (포장실적/포장대기) */
+/* 카테고리 셀 (포장실적/포장대기) — 좌측 틀고정 col1 */
 .pkd-cat-cell {
     font-weight: 700;
     color: #1e293b;
-    min-width: 64px;
+    min-width: 72px;
     vertical-align: middle;
-    background: transparent;
+    background: #ffffff;
     border-right: none;
+    position: sticky;
+    left: 0;
+    z-index: 10;
 }
 
-/* 구분 셀 (내수/수출/계) */
+/* 구분 셀 (내수/수출/계) — 좌측 틀고정 col2 */
 .pkd-div-cell {
-    min-width: 44px;
+    min-width: 52px;
     font-weight: 600;
     color: #64748b;
+    background: #ffffff;
+    position: sticky;
+    left: 72px;
+    z-index: 10;
 }
 .pkd-div-domestic {
     color: #b91c1c;
@@ -8526,6 +8613,15 @@ td.number {
 .pkd-data-row .pkd-val {
     background: transparent;
 }
+/* 고정 열 구분 — 그림자 경계선 */
+.pkd-div-cell::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -4px;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.04), transparent);
+    pointer-events: none;
+}
 
 /* 내수/수출 구분 — 얇은 선 */
 .pkd-data-row + .pkd-data-row td {
@@ -8538,6 +8634,9 @@ td.number {
     color: #1e40af;
     border-top: 1px solid #e2e8f0;
     border-bottom: 1px solid #e2e8f0;
+}
+.pkd-total-row .pkd-div-cell {
+    background: #ffffff;
 }
 
 /* 기말 행 스타일 (향후) */
