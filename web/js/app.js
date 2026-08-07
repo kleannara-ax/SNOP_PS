@@ -4446,31 +4446,38 @@ function renderPkgDailyTable() {
     ];
 
     var html = '';
+    var mm = String(month).padStart(2, '0');
     sections.forEach(function (sec) {
+        var pfx = sec.prefix === '포장실적' ? 'act' : 'wait';
         var totalRows = sec.rows.length + 1; // 내수 + 수출 + 계
         sec.rows.forEach(function (rowName, ri) {
+            var rowKey = rowName === '내수' ? 'dom' : 'exp';
             html += '<tr class="pkd-data-row">';
             if (ri === 0) {
                 html += '<td class="pkd-cat-cell" rowspan="' + totalRows + '">' + sec.cat + '</td>';
             }
             html += '<td class="pkd-div-cell pkd-div-' + (rowName === '내수' ? 'domestic' : 'export') + '">' + rowName + '</td>';
             for (var d = 1; d <= daysInMonth; d++) {
-                var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                var dd = String(d).padStart(2, '0');
+                var dateKey = year + '-' + mm + '-' + dd;
                 var val = (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
-                html += '<td class="pkd-val">' + (val ? Number(val).toLocaleString() : '') + '</td>';
+                var cellId = 'pkd-' + pfx + '-' + rowKey + '-' + dd;
+                html += '<td class="pkd-val" id="' + cellId + '">' + (val ? Number(val).toLocaleString() : '') + '</td>';
             }
             html += '</tr>';
         });
-        /* 계 행 */
+        /* 계 행 — 내수 + 수출 합산 (자동계산) */
         html += '<tr class="pkd-total-row">';
         html += '<td class="pkd-div-cell pkd-div-total">계</td>';
         for (var d = 1; d <= daysInMonth; d++) {
-            var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            var dd = String(d).padStart(2, '0');
+            var dateKey = year + '-' + mm + '-' + dd;
             var sum = 0;
             sec.rows.forEach(function (rowName) {
                 sum += (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
             });
-            html += '<td class="pkd-val pkd-val-total">' + (sum ? Number(sum).toLocaleString() : '') + '</td>';
+            var totalId = 'pkd-' + pfx + '-total-' + dd;
+            html += '<td class="pkd-val pkd-val-total" id="' + totalId + '">' + (sum ? Number(sum).toLocaleString() : '') + '</td>';
         }
         html += '</tr>';
     });
