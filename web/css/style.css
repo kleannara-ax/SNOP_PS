@@ -8405,64 +8405,79 @@ td.number {
     background: #e8eeff;
 }
 
-/* ── 일자별 실적량 테이블 ── */
+/* ── 일자별 실적량 테이블 (캡처 기반 미니멀 디자인) ── */
 .pkg-card-daily {
     margin-top: 24px;
 }
 .pkg-daily-table-wrap {
     overflow-x: auto;
     border-radius: 10px;
-    border: 1px solid #d1d5db;
 }
 .pkg-daily-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     white-space: nowrap;
 }
 
-/* thead */
+/* ── thead ── */
 .pkg-daily-table thead th {
-    background: #f1f5f9;
-    color: #475569;
+    background: transparent;
+    color: #334155;
     font-weight: 600;
-    padding: 4px 6px;
+    padding: 10px 8px;
     text-align: center;
-    border: 1px solid #d1d5db;
-    font-size: 0.74rem;
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
-.pkg-daily-table thead th.pkd-cat,
-.pkg-daily-table thead th.pkd-div {
-    background: #e2e8f0;
-    min-width: 60px;
+.pkd-month-head {
+    color: #94a3b8 !important;
+    font-weight: 500 !important;
+    min-width: 70px;
 }
-.pkg-daily-table thead th.pkd-weekend {
+.pkd-dow {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: inherit;
+}
+/* 토요일 파란색 */
+.pkg-daily-table thead th.pkd-sat {
+    color: #2563eb;
+}
+.pkg-daily-table thead th.pkd-sat .pkd-dow { color: #2563eb; }
+/* 일요일 빨간색 */
+.pkg-daily-table thead th.pkd-sun {
     color: #dc2626;
 }
+.pkg-daily-table thead th.pkd-sun .pkd-dow { color: #dc2626; }
 
-/* tbody 공통 */
+/* ── tbody 공통 ── */
 .pkg-daily-table td {
-    padding: 4px 6px;
+    padding: 10px 8px;
     text-align: center;
-    border: 1px solid #d1d5db;
-    font-size: 0.76rem;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.82rem;
+    color: #334155;
 }
 
 /* 카테고리 셀 (포장실적/포장대기) */
 .pkd-cat-cell {
-    background: #e2e8f0;
     font-weight: 700;
     color: #1e293b;
     min-width: 64px;
     vertical-align: middle;
-    border-right: 2px solid #94a3b8 !important;
+    background: transparent;
+    border-right: none;
 }
 
 /* 구분 셀 (내수/수출/계) */
 .pkd-div-cell {
     min-width: 44px;
     font-weight: 600;
-    border-right: 2px solid #94a3b8 !important;
+    color: #64748b;
 }
 .pkd-div-domestic {
     color: #b91c1c;
@@ -8471,35 +8486,36 @@ td.number {
     color: #1d4ed8;
 }
 .pkd-div-total {
-    color: #0f172a;
-    background: #dbeafe;
+    color: #1e40af;
+    font-weight: 700;
 }
 
 /* 데이터 셀 */
 .pkd-data-row .pkd-val {
-    background: #fffbeb;
-}
-.pkd-data-row .pkd-val.pkd-weekend {
-    background: #fff7d6;
+    background: transparent;
 }
 
-/* 내수/수출 구분 점선 */
+/* 내수/수출 구분 — 얇은 선 */
 .pkd-data-row + .pkd-data-row td {
-    border-top: 1px dashed #d1d5db;
+    border-top: none;
 }
 
 /* 계 행 */
 .pkd-total-row td {
-    background: #dbeafe;
     font-weight: 600;
     color: #1e40af;
-    border-top: 2px solid #93c5fd !important;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
 }
-.pkd-total-row .pkd-val-total.pkd-weekend {
-    background: #c7d9f5;
+
+/* 기말 행 스타일 (향후) */
+.pkd-gimal-row td {
+    font-weight: 700;
+    color: #2563eb;
+    border-top: 1px solid #cbd5e1;
 }
 
 /* 포장실적/포장대기 구분 — 카테고리 간 상단 border 강조 */
 .pkg-daily-table tbody tr:nth-child(4) td {
-    border-top: 2px solid #94a3b8 !important;
+    border-top: 2px solid #e2e8f0;
 }
