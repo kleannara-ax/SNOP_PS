@@ -8414,7 +8414,8 @@ td.number {
     border-radius: 10px;
 }
 .pkg-daily-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.82rem;
     white-space: nowrap;
@@ -8425,12 +8426,15 @@ td.number {
     background: transparent;
     color: #334155;
     font-weight: 600;
-    padding: 10px 8px;
+    padding: 10px 12px;
     text-align: center;
     border: none;
     border-bottom: 1px solid #e2e8f0;
     font-size: 0.8rem;
     line-height: 1.4;
+}
+.pkg-daily-table thead th.pkd-day-head {
+    min-width: 72px;
 }
 .pkd-month-head {
     color: #94a3b8 !important;
@@ -8455,8 +8459,9 @@ td.number {
 
 /* ── tbody 공통 ── */
 .pkg-daily-table td {
-    padding: 10px 8px;
+    padding: 10px 12px;
     text-align: center;
+    min-width: 72px;
     border: none;
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.82rem;
