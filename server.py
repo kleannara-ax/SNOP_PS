@@ -1384,12 +1384,27 @@ def api_slitter_subulbu_work_save():
 ##  원지포장 실적 데이터 로드
 ## ══════════════════════════════════════════════════
 PKG_DATA_FILE = os.path.join(DATA_DIR, 'packaging_data.json')
+PKG_DAILY_FILE = os.path.join(DATA_DIR, 'packaging_daily.json')
 
 @app.route('/api/packaging/data/load', methods=['GET'])
 def api_packaging_data_load():
     """원지포장 월별 지관별 실적 데이터 로드"""
     if os.path.exists(PKG_DATA_FILE):
         with open(PKG_DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    else:
+        data = {}
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/packaging/daily/load', methods=['GET'])
+def api_packaging_daily_load():
+    """원지포장 일자별 실적 데이터 로드 — 포장실적일자별 내수/수출 건수
+    Response: { "success": true, "data": { "2026-02-20": { "포장실적_내수": 0, "포장실적_수출": 386 }, ... } }
+    향후 I/F 연동 시 이 API를 DB 조회로 교체 예정
+    """
+    if os.path.exists(PKG_DAILY_FILE):
+        with open(PKG_DAILY_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
     else:
         data = {}
