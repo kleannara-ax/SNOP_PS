@@ -4407,14 +4407,94 @@ function loadPackagingData() {
     loadPkgCapa(function () { check(); });
 }
 
+/* ── 일자별 실적량 테이블 ── */
+var pkgDailyData = {}; // { "2026-08-01": { "포장실적_내수": 0, "포장실적_수출": 0, "포장대기_내수": 0, "포장대기_수출": 0 } }
+
+function renderPkgDailyTable() {
+    var thead = document.getElementById('pkg-daily-thead');
+    var tbody = document.getElementById('pkg-daily-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth() + 1;
+    var daysInMonth = getDaysInMonth(year, month);
+    var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+    /* ── thead: 요일 행 + 일자 행 ── */
+    var thRow1 = '<tr><th class="pkd-cat" rowspan="2"></th><th class="pkd-div" rowspan="2">구분</th>';
+    var thRow2 = '<tr>';
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dt = new Date(year, month - 1, d);
+        var dow = dt.getDay(); // 0=일
+        var dowName = dayNames[dow];
+        var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
+        thRow1 += '<th class="pkd-day-head' + weekendCls + '">' + dowName + '</th>';
+        thRow2 += '<th class="pkd-day-head' + weekendCls + '">' + d + '일</th>';
+    }
+    thRow1 += '</tr>';
+    thRow2 += '</tr>';
+    thead.innerHTML = thRow1 + thRow2;
+
+    /* ── tbody ── */
+    var sections = [
+        { cat: '포장실적', rows: ['내수', '수출'], prefix: '포장실적' },
+        { cat: '포장대기', rows: ['내수', '수출'], prefix: '포장대기' }
+    ];
+
+    var html = '';
+    sections.forEach(function (sec) {
+        var totalRows = sec.rows.length + 1; // 내수 + 수출 + 계
+        sec.rows.forEach(function (rowName, ri) {
+            html += '<tr class="pkd-data-row">';
+            if (ri === 0) {
+                html += '<td class="pkd-cat-cell" rowspan="' + totalRows + '">' + sec.cat + '</td>';
+            }
+            html += '<td class="pkd-div-cell pkd-div-' + (rowName === '내수' ? 'domestic' : 'export') + '">' + rowName + '</td>';
+            for (var d = 1; d <= daysInMonth; d++) {
+                var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                var val = (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
+                var dt = new Date(year, month - 1, d);
+                var dow = dt.getDay();
+                var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
+                html += '<td class="pkd-val' + weekendCls + '">' + (val ? Number(val).toLocaleString() : '') + '</td>';
+            }
+            html += '</tr>';
+        });
+        /* 계 행 */
+        html += '<tr class="pkd-total-row">';
+        html += '<td class="pkd-div-cell pkd-div-total">계</td>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            var sum = 0;
+            sec.rows.forEach(function (rowName) {
+                sum += (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
+            });
+            var dt = new Date(year, month - 1, d);
+            var dow = dt.getDay();
+            var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
+            html += '<td class="pkd-val pkd-val-total' + weekendCls + '">' + (sum ? Number(sum).toLocaleString() : '') + '</td>';
+        }
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
 function initPackaging() {
+    var now = new Date();
+    var monthDay = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 기준';
+
     /* 시스템 날짜 기준 라벨 */
     var dateLabel = document.getElementById('pkg-date-label');
-    if (dateLabel) {
-        var now = new Date();
-        dateLabel.textContent = now.getMonth() + 1 + '월 ' + now.getDate() + '일 기준';
-    }
+    if (dateLabel) dateLabel.textContent = monthDay;
+
+    /* 일자별 실적량 라벨 */
+    var dailyLabel = document.getElementById('pkg-daily-date-label');
+    if (dailyLabel) dailyLabel.textContent = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
+
     loadPackagingData();
+    renderPkgDailyTable();
 }
 
 /* ── 앱 시작 ── */

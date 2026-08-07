@@ -8404,3 +8404,102 @@ td.number {
 .pkg-summary-table tbody tr:not(.pkg-row-total):not(.pkg-row-rate):hover td:first-child {
     background: #e8eeff;
 }
+
+/* ── 일자별 실적량 테이블 ── */
+.pkg-card-daily {
+    margin-top: 24px;
+}
+.pkg-daily-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+}
+.pkg-daily-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+/* thead */
+.pkg-daily-table thead th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    padding: 4px 6px;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    font-size: 0.74rem;
+}
+.pkg-daily-table thead th.pkd-cat,
+.pkg-daily-table thead th.pkd-div {
+    background: #e2e8f0;
+    min-width: 60px;
+}
+.pkg-daily-table thead th.pkd-weekend {
+    color: #dc2626;
+}
+
+/* tbody 공통 */
+.pkg-daily-table td {
+    padding: 4px 6px;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    font-size: 0.76rem;
+}
+
+/* 카테고리 셀 (포장실적/포장대기) */
+.pkd-cat-cell {
+    background: #e2e8f0;
+    font-weight: 700;
+    color: #1e293b;
+    min-width: 64px;
+    vertical-align: middle;
+    border-right: 2px solid #94a3b8 !important;
+}
+
+/* 구분 셀 (내수/수출/계) */
+.pkd-div-cell {
+    min-width: 44px;
+    font-weight: 600;
+    border-right: 2px solid #94a3b8 !important;
+}
+.pkd-div-domestic {
+    color: #b91c1c;
+}
+.pkd-div-export {
+    color: #1d4ed8;
+}
+.pkd-div-total {
+    color: #0f172a;
+    background: #dbeafe;
+}
+
+/* 데이터 셀 */
+.pkd-data-row .pkd-val {
+    background: #fffbeb;
+}
+.pkd-data-row .pkd-val.pkd-weekend {
+    background: #fff7d6;
+}
+
+/* 내수/수출 구분 점선 */
+.pkd-data-row + .pkd-data-row td {
+    border-top: 1px dashed #d1d5db;
+}
+
+/* 계 행 */
+.pkd-total-row td {
+    background: #dbeafe;
+    font-weight: 600;
+    color: #1e40af;
+    border-top: 2px solid #93c5fd !important;
+}
+.pkd-total-row .pkd-val-total.pkd-weekend {
+    background: #c7d9f5;
+}
+
+/* 포장실적/포장대기 구분 — 카테고리 간 상단 border 강조 */
+.pkg-daily-table tbody tr:nth-child(4) td {
+    border-top: 2px solid #94a3b8 !important;
+}
