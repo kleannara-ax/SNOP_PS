@@ -4001,6 +4001,9 @@ function initSlitterCalc() {
  */
 var packagingData = {};
 
+/** 선택된 년도 (기본 = 시스템 현재년도) */
+var pkgSelectedYear = new Date().getFullYear();
+
 /** 일CAPA 사용자 입력값 — { '01': 숫자, '02': 숫자, ... } */
 var pkgCapaData = {};
 
@@ -4020,12 +4023,13 @@ function renderPackagingSummary() {
     if (!thead || !tbody) return;
 
     var now = new Date();
-    var year = now.getFullYear();
-    var currentMonth = now.getMonth() + 1; // 1~12
+    var year = pkgSelectedYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
 
     var rows = ['3인치', '6인치', '12인치'];
     var months = [];
-    for (var m = 1; m <= currentMonth; m++) {
+    for (var m = 1; m <= maxMonth; m++) {
         months.push(m);
     }
 
@@ -4156,8 +4160,9 @@ function renderPkgRateChart() {
     if (!canvas) return;
 
     var now = new Date();
-    var year = now.getFullYear();
-    var currentMonth = now.getMonth() + 1;
+    var year = pkgSelectedYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var currentMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
 
     var labels = [];
     var dataArr = [];
@@ -4295,15 +4300,16 @@ function bindPkgCapaInputs() {
 /** 최대CAPA + 가동율 재계산 (DOM 직접 갱신, 전체 리렌더 없이) */
 function recalcPkgMaxCapa() {
     var now = new Date();
-    var year = now.getFullYear();
-    var currentMonth = now.getMonth() + 1;
+    var year = pkgSelectedYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
 
     var capaMaxTotal = 0;
     var capaDayTotal = 0;
     var rateSum = 0;
     var rateCnt = 0;
     var months = [];
-    for (var m = 1; m <= currentMonth; m++) months.push(m);
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
 
     months.forEach(function (m) {
         var mm = String(m).padStart(2, '0');
@@ -4360,7 +4366,7 @@ function recalcPkgMaxCapa() {
 
 /** 일CAPA 서버 저장 */
 function savePkgCapa() {
-    var year = String(new Date().getFullYear());
+    var year = String(pkgSelectedYear);
     fetch('/api/packaging/capa/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4372,7 +4378,7 @@ function savePkgCapa() {
 
 /** 일CAPA 서버 로드 */
 function loadPkgCapa(callback) {
-    var year = String(new Date().getFullYear());
+    var year = String(pkgSelectedYear);
     fetch('/api/packaging/capa/load?year=' + year)
         .then(function (r) { return r.json(); })
         .then(function (res) {
@@ -4483,6 +4489,26 @@ function initPackaging() {
     /* 일자별 실적량 라벨 */
     var dailyLabel = document.getElementById('pkg-daily-date-label');
     if (dailyLabel) dailyLabel.textContent = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
+
+    /* 년도 선택 필터 초기화 */
+    var yearSelect = document.getElementById('pkg-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === pkgSelectedYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            pkgSelectedYear = parseInt(this.value);
+            /* CAPA 다시 로드 후 테이블+차트 재렌더링 */
+            loadPkgCapa(function () {
+                renderPackagingSummary();
+            });
+        });
+    }
 
     loadPackagingData();
     renderPkgDailyTable();
