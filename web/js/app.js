@@ -4421,20 +4421,17 @@ function renderPkgDailyTable() {
     var daysInMonth = getDaysInMonth(year, month);
     var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-    /* ── thead: 요일 행 + 일자 행 ── */
-    var thRow1 = '<tr><th class="pkd-cat" rowspan="2"></th><th class="pkd-div" rowspan="2">구분</th>';
-    var thRow2 = '<tr>';
+    /* ── thead: 1행 — 일자 + (요일) ── */
+    var thRow = '<tr><th class="pkd-month-head">' + month + '월</th>';
     for (var d = 1; d <= daysInMonth; d++) {
         var dt = new Date(year, month - 1, d);
         var dow = dt.getDay(); // 0=일
         var dowName = dayNames[dow];
-        var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
-        thRow1 += '<th class="pkd-day-head' + weekendCls + '">' + dowName + '</th>';
-        thRow2 += '<th class="pkd-day-head' + weekendCls + '">' + d + '일</th>';
+        var dowCls = dow === 0 ? ' pkd-sun' : dow === 6 ? ' pkd-sat' : '';
+        thRow += '<th class="pkd-day-head' + dowCls + '">' + d + '일<br><span class="pkd-dow">(' + dowName + ')</span></th>';
     }
-    thRow1 += '</tr>';
-    thRow2 += '</tr>';
-    thead.innerHTML = thRow1 + thRow2;
+    thRow += '</tr>';
+    thead.innerHTML = thRow;
 
     /* ── tbody ── */
     var sections = [
@@ -4454,10 +4451,7 @@ function renderPkgDailyTable() {
             for (var d = 1; d <= daysInMonth; d++) {
                 var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
                 var val = (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
-                var dt = new Date(year, month - 1, d);
-                var dow = dt.getDay();
-                var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
-                html += '<td class="pkd-val' + weekendCls + '">' + (val ? Number(val).toLocaleString() : '') + '</td>';
+                html += '<td class="pkd-val">' + (val ? Number(val).toLocaleString() : '') + '</td>';
             }
             html += '</tr>';
         });
@@ -4470,10 +4464,7 @@ function renderPkgDailyTable() {
             sec.rows.forEach(function (rowName) {
                 sum += (pkgDailyData[dateKey] && pkgDailyData[dateKey][sec.prefix + '_' + rowName]) || 0;
             });
-            var dt = new Date(year, month - 1, d);
-            var dow = dt.getDay();
-            var weekendCls = (dow === 0 || dow === 6) ? ' pkd-weekend' : '';
-            html += '<td class="pkd-val pkd-val-total' + weekendCls + '">' + (sum ? Number(sum).toLocaleString() : '') + '</td>';
+            html += '<td class="pkd-val pkd-val-total">' + (sum ? Number(sum).toLocaleString() : '') + '</td>';
         }
         html += '</tr>';
     });
