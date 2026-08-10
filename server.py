@@ -1388,7 +1388,35 @@ PKG_DAILY_FILE = os.path.join(DATA_DIR, 'packaging_daily.json')
 
 @app.route('/api/packaging/data/load', methods=['GET'])
 def api_packaging_data_load():
-    """원지포장 월별 지관별 실적 데이터 로드"""
+    """원지포장 월별 지관별 실적 데이터 로드
+    DB 우선 조회 → 실패 시 JSON 폴백
+    Response: { "success": true, "data": { "2026-07": { "3인치": 1397.2, "6인치": 5318.7, "12인치": 5538.1 }, ... } }
+    """
+    # ── DB 조회 시도 ──
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT year_month, jigwan, weight_ton '
+                    'FROM ps_packaging_monthly '
+                    'ORDER BY year_month, jigwan'
+                )
+                rows = cursor.fetchall()
+            conn.close()
+            data = {}
+            for r in rows:
+                ym = r['year_month']
+                if ym not in data:
+                    data[ym] = {}
+                data[ym][r['jigwan']] = float(r['weight_ton'])
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            print(f'[DB] ps_packaging_monthly 조회 실패 — JSON 폴백: {e}')
+            if conn:
+                conn.close()
+
+    # ── JSON 폴백 ──
     if os.path.exists(PKG_DATA_FILE):
         with open(PKG_DATA_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -1399,10 +1427,41 @@ def api_packaging_data_load():
 
 @app.route('/api/packaging/daily/load', methods=['GET'])
 def api_packaging_daily_load():
-    """원지포장 일자별 실적 데이터 로드 — 포장실적일자별 내수/수출 건수
-    Response: { "success": true, "data": { "2026-02-20": { "포장실적_내수": 0, "포장실적_수출": 386 }, ... } }
-    향후 I/F 연동 시 이 API를 DB 조회로 교체 예정
+    """원지포장 일자별 실적 데이터 로드
+    DB 우선 조회 → 실패 시 JSON 폴백
+    Response: { "success": true, "data": { "2026-02-20": { "포장실적_내수": 0, "포장실적_수출": 386.0, ... }, ... } }
     """
+    # ── DB 조회 시도 ──
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT record_date, '
+                    '       pkg_actual_domestic, pkg_actual_export, '
+                    '       pkg_wait_domestic,   pkg_wait_export '
+                    'FROM ps_packaging_daily '
+                    'ORDER BY record_date'
+                )
+                rows = cursor.fetchall()
+            conn.close()
+            data = {}
+            for r in rows:
+                dt = r['record_date']
+                dk = dt.strftime('%Y-%m-%d') if hasattr(dt, 'strftime') else str(dt)
+                data[dk] = {
+                    '포장실적_내수': float(r['pkg_actual_domestic']),
+                    '포장실적_수출': float(r['pkg_actual_export']),
+                    '포장대기_내수': float(r['pkg_wait_domestic']),
+                    '포장대기_수출': float(r['pkg_wait_export']),
+                }
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            print(f'[DB] ps_packaging_daily 조회 실패 — JSON 폴백: {e}')
+            if conn:
+                conn.close()
+
+    # ── JSON 폴백 ──
     if os.path.exists(PKG_DAILY_FILE):
         with open(PKG_DAILY_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
