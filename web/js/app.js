@@ -2297,17 +2297,18 @@ function aggregateSlitterDaily(yearMonth) {
 }
 
 /**
- * 슬리터 상세 데이터에서 일자별 **누적** 총합계 집계 (ton 단위)
- * → 1일~해당일까지의 누적 총합계 = 수불부 기말 값
+ * 슬리터 상세 데이터에서 일자별 **당일** 총합계 집계 (ton 단위)
+ * → 해당일의 슬리터 대기창고 재고 = 수불부 기말 값
+ *   (대기창고 데이터는 당일 재고 snapshot이므로 누적이 아님)
  * @param {string} yearMonth  — 'YYYY-MM'
  * @param {number} daysInMonth — 해당 월 일수
- * @returns {{ [day: string]: number }} — 일자별 누적 총합계 (ton)
+ * @returns {{ [day: string]: number }} — 일자별 당일 총합계 (ton)
  */
 function aggregateSlitterDailyTotal(yearMonth, daysInMonth) {
     var rows = slitterDetailState.rows || [];
     var dailyMap = {};
 
-    /* 먼저 일자별 당일 합계 집계 */
+    /* 일자별 당일 합계 집계 */
     rows.forEach(function (r) {
         var date = r.date || '';
         if (!date) return;
@@ -2318,16 +2319,14 @@ function aggregateSlitterDailyTotal(yearMonth, daysInMonth) {
         dailyMap[day] += (Number(r.weight) || 0) / 1000; // kg → ton
     });
 
-    /* 1일부터 해당일까지 누적 합산 */
-    var cumulativeMap = {};
-    var cumSum = 0;
+    /* 당일 합계를 그대로 반환 (누적 아님) */
+    var resultMap = {};
     for (var d = 1; d <= (daysInMonth || 31); d++) {
         var dk = String(d);
-        cumSum += (dailyMap[dk] || 0);
-        cumulativeMap[dk] = cumSum;
+        resultMap[dk] = dailyMap[dk] || 0;
     }
 
-    return cumulativeMap;
+    return resultMap;
 }
 
 /**
@@ -2361,14 +2360,14 @@ function aggregateSubulbuWork(yearMonth) {
 /**
  * 수불부 산술 계산
  * ─────────────────────────────────────────────
- * 기말 = 일자별 상세 내역의 1일~해당일 "누적" 총합계 (ton)
+ * 기말 = 당일 슬리터 대기창고 재고 총합계 (ton) — snapshot
  * 기초 = 전일 기말 (1일은 전월 마지막일 기말값)
  * 내수/수출(작업) = 수불부 작업(I/F) 테이블에서 집계
  * 계 = 내수 + 수출
  * 입고 = 기말 + 계 - 기초
  * ─────────────────────────────────────────────
  * @param {number} daysInMonth — 해당 월 일수
- * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 누적 총합계 (ton)
+ * @param {{ [day: string]: number }} dailyTotal — 일자별 상세내역 당일 총합계 (ton)
  * @param {{ [day: string]: { domestic: number, export: number } }} dailyWork — 작업(I/F) 일자별 집계
  * @param {number} prevMonthLastGimal — 전월 마지막 일 기말값 (ton)
  * @returns {{ kicho: number[], ipgo: number[], naesu: number[], suchul: number[], gye: number[], gimal: number[] }}
@@ -2379,7 +2378,7 @@ function calcSubulbu(daysInMonth, dailyTotal, dailyWork, prevMonthLastGimal) {
     for (var d = 1; d <= daysInMonth; d++) {
         var dayKey = String(d);
 
-        /* 기말 = 당일 상세내역 총합계 */
+        /* 기말 = 당일 슬리터 대기창고 재고 (snapshot) */
         var gimalVal = Math.round((dailyTotal[dayKey] || 0) * 10) / 10;
 
         /* 기초 = 전일 기말 (1일은 전월 마지막일 기말값) */
@@ -2444,7 +2443,7 @@ function renderSubulbuTable(year, month) {
         headerRow.appendChild(th);
     }
 
-    /* ── 일자별 상세내역 누적 총합계 집계 (기말 용) ── */
+    /* ── 일자별 상세내역 당일 총합계 집계 (기말 = 당일 재고) ── */
     var dailyTotal = aggregateSlitterDailyTotal(yearMonth, daysInMonth);
 
     /* ── 작업(I/F) 일자별 내수/수출 집계 ── */
@@ -2660,7 +2659,7 @@ function downloadSubulbuExcel() {
     var month = parseInt(parts[1], 10);
     var daysInMonth = new Date(year, month, 0).getDate();
 
-    /* 일자별 상세내역 누적 총합계 (기말용) */
+    /* 일자별 상세내역 당일 총합계 (기말 = 당일 재고) */
     var dailyTotal = aggregateSlitterDailyTotal(ym, daysInMonth);
     /* 작업(I/F) 일자별 내수/수출 집계 */
     var dailyWork = aggregateSubulbuWork(ym);
