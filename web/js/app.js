@@ -3897,7 +3897,8 @@ function loadSlitterDetail() {
     var ym = slitterDetailState.yearMonth;
     if (!ym) {
         var now = new Date();
-        ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        var yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        ym = yesterday.getFullYear() + '-' + String(yesterday.getMonth() + 1).padStart(2, '0');
         slitterDetailState.yearMonth = ym;
     }
 
@@ -3955,12 +3956,14 @@ function saveSlitterDetail() {
  * 슬리터 일자별 상세 내역 초기화
  */
 function initSlitterDetail() {
-    /* 날짜 선택기 초기값 = 시스템 현재 일자 */
+    /* 날짜 선택기 초기값 = 전일(어제) 일자
+       데이터는 매일 아침 7시에 수집되므로 어제자 데이터까지만 조회 가능 */
     var dateInput = document.getElementById('slitter-detail-date');
     if (dateInput) {
         var now = new Date();
-        var currentDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        var currentYM = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        var yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        var currentDate = yesterday.getFullYear() + '-' + String(yesterday.getMonth() + 1).padStart(2, '0') + '-' + String(yesterday.getDate()).padStart(2, '0');
+        var currentYM = yesterday.getFullYear() + '-' + String(yesterday.getMonth() + 1).padStart(2, '0');
         dateInput.value = currentDate;
         slitterDetailState.yearMonth = currentYM;
         slitterDetailState.selectedDate = currentDate;
