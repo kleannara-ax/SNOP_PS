@@ -3619,6 +3619,7 @@ function renderSlitterDailyChart() {
                     pointHoverRadius: 6,
                     tension: 0.3,
                     fill: true,
+                    spanGaps: true,
                 },
                 {
                     label: '내수',
@@ -3633,6 +3634,7 @@ function renderSlitterDailyChart() {
                     pointHoverRadius: 6,
                     tension: 0.3,
                     fill: true,
+                    spanGaps: true,
                 },
             ],
         },
@@ -3665,7 +3667,9 @@ function renderSlitterDailyChart() {
                     cornerRadius: 8,
                     callbacks: {
                         label: function (ctx) {
-                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' ton';
+                            var v = ctx.parsed.y;
+                            if (v == null) return ctx.dataset.label + ': -';
+                            return ctx.dataset.label + ': ' + v.toFixed(1) + ' ton';
                         },
                     },
                 },
