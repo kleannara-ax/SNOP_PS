@@ -509,6 +509,9 @@ SLITTER_SUBULBU_FILE = os.path.join(DATA_DIR, 'slitter_subulbu.json')
 # ─── 슬리터 수불부 작업 데이터 파일 (I/F 내수/수출) ───
 SLITTER_SUBULBU_WORK_FILE = os.path.join(DATA_DIR, 'slitter_subulbu_work.json')
 
+# ─── 밀롤창고 재공현황 데이터 파일 ───
+MILLROLL_INVENTORY_FILE = os.path.join(DATA_DIR, 'millroll_inventory.json')
+
 
 def load_json_file(filepath, default=None):
     """JSON 파일 로드 — 없거나 파싱 실패 시 default 반환"""
@@ -1503,6 +1506,29 @@ def api_packaging_capa_save():
         json.dump(all_data, f, ensure_ascii=False, indent=2)
 
     return jsonify({'success': True, 'message': f'{year}년 일CAPA 저장 완료'})
+
+
+# ═══════════════════════════════════════════════════
+# 밀롤창고 재공현황 API
+# ═══════════════════════════════════════════════════
+
+@app.route('/api/millroll-inventory/load', methods=['GET'])
+def api_millroll_inventory_load():
+    """밀롤창고 재공현황 데이터 로드 — 전체 또는 연도별"""
+    data = load_json_file(MILLROLL_INVENTORY_FILE, {})
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/millroll-inventory/save', methods=['POST'])
+def api_millroll_inventory_save():
+    """밀롤창고 재공현황 데이터 저장"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    data = body.get('data', {})
+    save_json_file(MILLROLL_INVENTORY_FILE, data)
+    return jsonify({'success': True, 'message': '밀롤창고 재공현황 저장 완료'})
 
 
 if __name__ == '__main__':
