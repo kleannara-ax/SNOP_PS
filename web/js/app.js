@@ -449,6 +449,9 @@ function init() {
     /* 원지포장 월별 요약 초기화 */
     initPackaging();
 
+    /* 밀롤창고 재공현황 초기화 */
+    initMillrollInventory();
+
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
 
@@ -4731,6 +4734,133 @@ function initPackaging() {
     }
 
     loadPackagingData();
+}
+
+/* ══════════════════════════════════════════════
+   밀롤창고 재공현황 — 월별 요약 테이블
+   ══════════════════════════════════════════════ */
+
+var millrollInventoryData = {};   // { '2026-01': { '우회': 100, '밀롤': 200 }, ... }
+var mrSelectedYear = new Date().getFullYear();
+
+/**
+ * 밀롤창고 재공현황 월별 요약 테이블 렌더링
+ * 구분: 우회, 밀롤 / 계 행 포함
+ */
+function renderMillrollSummary() {
+    var thead = document.getElementById('mr-summary-thead');
+    var tbody = document.getElementById('mr-summary-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = mrSelectedYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var rows = ['우회', '밀롤'];
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) {
+        months.push(m);
+    }
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '<th>총계</th><th>평균</th></tr>';
+    thead.innerHTML = thRow;
+
+    /* ── tbody ── */
+    var html = '';
+
+    /* 우회 / 밀롤 행 */
+    rows.forEach(function (rowName) {
+        html += '<tr>';
+        html += '<td>' + rowName + '</td>';
+        var total = 0;
+        months.forEach(function (m) {
+            var ym = year + '-' + String(m).padStart(2, '0');
+            var val = (millrollInventoryData[ym] && millrollInventoryData[ym][rowName]) || 0;
+            total += val;
+            var display = val ? Number(val.toFixed(1)).toLocaleString() : '';
+            html += '<td class="pkg-data-cell">' + display + '</td>';
+        });
+        var avg = months.length > 0 ? Math.round((total / months.length) * 10) / 10 : 0;
+        html += '<td class="pkg-col-summary">' + (total ? Number(total.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '<td class="pkg-col-summary">' + (avg ? Number(avg.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '</tr>';
+    });
+
+    /* 계 행 */
+    html += '<tr class="pkg-row-total">';
+    html += '<td>계</td>';
+    var grandTotal = 0;
+    months.forEach(function (m) {
+        var ym = year + '-' + String(m).padStart(2, '0');
+        var colSum = 0;
+        rows.forEach(function (r) {
+            colSum += (millrollInventoryData[ym] && millrollInventoryData[ym][r]) || 0;
+        });
+        grandTotal += colSum;
+        html += '<td>' + (colSum ? Number(colSum.toFixed(1)).toLocaleString() : '') + '</td>';
+    });
+    var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
+    html += '<td class="pkg-col-summary">' + (grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '') + '</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 밀롤창고 재공현황 데이터 로드
+ */
+function loadMillrollInventory() {
+    fetch('/api/millroll-inventory/load')
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                millrollInventoryData = result.data;
+            } else {
+                millrollInventoryData = {};
+            }
+            renderMillrollSummary();
+        })
+        .catch(function (err) {
+            console.error('[밀롤 재공현황 로드 오류]', err);
+            millrollInventoryData = {};
+            renderMillrollSummary();
+        });
+}
+
+/**
+ * 밀롤창고 재공현황 초기화
+ */
+function initMillrollInventory() {
+    var now = new Date();
+    var monthDay = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 기준';
+
+    /* 시스템 날짜 기준 라벨 */
+    var dateLabel = document.getElementById('mr-date-label');
+    if (dateLabel) dateLabel.textContent = monthDay;
+
+    /* 년도 선택 필터 초기화 */
+    var yearSelect = document.getElementById('mr-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === mrSelectedYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            mrSelectedYear = parseInt(this.value);
+            renderMillrollSummary();
+        });
+    }
+
+    loadMillrollInventory();
 }
 
 /* ── 앱 시작 ── */
