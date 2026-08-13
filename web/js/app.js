@@ -3578,6 +3578,7 @@ function renderSlitterDailyChart() {
     var labels = [];
     var domesticData = [];
     var exportData = [];
+    var totalData = [];
     var mm = String(month).padStart(2, '0');
 
     for (var d = 1; d <= daysInMonth; d++) {
@@ -3586,11 +3587,15 @@ function renderSlitterDailyChart() {
         labels.push(month + '/' + d);
 
         if (dailyMap[dateKey]) {
-            domesticData.push(Math.round(dailyMap[dateKey].domestic / 100) / 10);
-            exportData.push(Math.round(dailyMap[dateKey].export / 100) / 10);
+            var domVal = Math.round(dailyMap[dateKey].domestic / 100) / 10;
+            var expVal = Math.round(dailyMap[dateKey].export / 100) / 10;
+            domesticData.push(domVal);
+            exportData.push(expVal);
+            totalData.push(Math.round((domVal + expVal) * 10) / 10);
         } else {
             domesticData.push(null);
             exportData.push(null);
+            totalData.push(null);
         }
     }
 
@@ -3633,6 +3638,22 @@ function renderSlitterDailyChart() {
                     pointHoverRadius: 6,
                     tension: 0.3,
                     fill: true,
+                    spanGaps: true,
+                },
+                {
+                    label: '합계',
+                    data: totalData,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 5,
+                    tension: 0.3,
+                    fill: false,
                     spanGaps: true,
                 },
             ],
