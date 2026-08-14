@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260814c">
+    <link rel="stylesheet" href="css/style.css?v=20260814d">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -769,6 +769,29 @@
                 <div class="pkg-right-stack">
                 </div>
             </div>
+
+            <!-- ── 밀롤창고 일별 재공현황 ── -->
+            <div class="slitter-card outsource-card">
+                <div class="outsource-card-header">
+                    <h3 class="outsource-title">밀롤창고 재공현황(일)</h3>
+                    <div class="outsource-controls">
+                        <input type="month" id="mr-daily-month-selector" class="outsource-month-input">
+                    </div>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="outsource-table" id="mr-daily-table">
+                            <thead>
+                                <tr id="mr-daily-header-row">
+                                    <th class="outsource-th-month" colspan="2">8월</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mr-daily-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ── 서브패널 2: 슬리터 ── -->
@@ -1502,6 +1525,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260814c"></script>
+<script src="js/app.js?v=20260814d"></script>
 </body>
 </html>
