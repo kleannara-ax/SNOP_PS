@@ -7987,6 +7987,11 @@ td.number {
     align-items: center;
     gap: 10px;
 }
+.outsource-unit-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 400;
+}
 
 /* ── 외주 테이블 (모던 스타일) ── */
 .outsource-table {

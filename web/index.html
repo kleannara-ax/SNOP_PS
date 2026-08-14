@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260814g">
+    <link rel="stylesheet" href="css/style.css?v=20260814h">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -792,6 +792,32 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── 밀롤창고 월령분석 ── -->
+            <div class="slitter-card outsource-card">
+                <div class="outsource-card-header">
+                    <h3 class="outsource-title">월령분석</h3>
+                    <span class="outsource-unit-label">단위 : ton</span>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="outsource-table" id="mr-aging-table">
+                            <thead id="mr-aging-thead">
+                                <tr>
+                                    <th>구분</th>
+                                    <th>90일 미만</th>
+                                    <th>90~150</th>
+                                    <th>151~180일</th>
+                                    <th>180초과</th>
+                                    <th>합계</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mr-aging-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ── 서브패널 2: 슬리터 ── -->
@@ -1525,6 +1551,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260814g"></script>
+<script src="js/app.js?v=20260814h"></script>
 </body>
 </html>

@@ -455,6 +455,9 @@ function init() {
     /* 밀롤창고 일별 재공현황 초기화 */
     initMillrollDaily();
 
+    /* 밀롤창고 월령분석 초기화 */
+    initMillrollAging();
+
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
 
@@ -5037,6 +5040,92 @@ function initMillrollDaily() {
     }
 
     renderMillrollDailyTable(year, month);
+}
+
+/* ══════════════════════════════════════════════
+   밀롤창고 월령분석
+   ══════════════════════════════════════════════ */
+
+/**
+ * 월령분석 테이블 렌더링
+ * 행: 내수, 수출, 계(자동 합산)
+ * 열: 90일 미만, 90~150, 151~180일, 180초과, 합계
+ */
+function renderMillrollAging() {
+    var tbody = document.getElementById('mr-aging-tbody');
+    if (!tbody) return;
+
+    var cols = ['under90', 'r90_150', 'r151_180', 'over180', 'sum'];
+    var rows = [
+        { key: 'domestic', label: '내수',  rowClass: 'outsource-row-normal' },
+        { key: 'export',   label: '수출',  rowClass: 'outsource-row-normal' },
+        { key: 'total',    label: '계',    rowClass: 'outsource-row-total' },
+    ];
+
+    var html = '';
+    rows.forEach(function (row) {
+        html += '<tr class="' + row.rowClass + '">';
+        html += '<td class="outsource-sub-label">' + row.label + '</td>';
+        cols.forEach(function (col) {
+            html += '<td class="outsource-calc" data-aging-row="' + row.key + '" data-aging-col="' + col + '">-</td>';
+        });
+        html += '</tr>';
+    });
+    tbody.innerHTML = html;
+
+    updateMillrollAgingCalc();
+}
+
+/**
+ * 월령분석 계 행 자동 합산
+ * - 계 = 내수 + 수출 (각 열별)
+ * - 합계 = 각 행의 모든 열 합
+ */
+function updateMillrollAgingCalc() {
+    var tbody = document.getElementById('mr-aging-tbody');
+    if (!tbody) return;
+
+    var cells = tbody.querySelectorAll('td[data-aging-row][data-aging-col]');
+    var cellMap = {};
+    cells.forEach(function (td) {
+        var r = td.dataset.agingRow;
+        var c = td.dataset.agingCol;
+        if (!cellMap[r]) cellMap[r] = {};
+        cellMap[r][c] = td;
+    });
+
+    var dataCols = ['under90', 'r90_150', 'r151_180', 'over180'];
+    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : '-'; };
+    var parseVal = function (td) {
+        var t = (td && td.textContent) || '';
+        if (t === '-' || t === '') return 0;
+        return parseFloat(t.replace(/,/g, '')) || 0;
+    };
+
+    /* 내수/수출 행별 합계(sum) 계산 */
+    ['domestic', 'export'].forEach(function (rk) {
+        var rowSum = 0;
+        dataCols.forEach(function (ck) {
+            rowSum += parseVal(cellMap[rk] && cellMap[rk][ck]);
+        });
+        if (cellMap[rk] && cellMap[rk].sum) cellMap[rk].sum.textContent = fmt(rowSum);
+    });
+
+    /* 계 행 = 내수 + 수출 (열별) */
+    dataCols.concat(['sum']).forEach(function (ck) {
+        var dom = parseVal(cellMap.domestic && cellMap.domestic[ck]);
+        var exp = parseVal(cellMap['export'] && cellMap['export'][ck]);
+        if (cellMap.total && cellMap.total[ck]) {
+            cellMap.total[ck].textContent = fmt(dom + exp);
+        }
+    });
+}
+
+/**
+ * 밀롤창고 월령분석 초기화
+ */
+function initMillrollAging() {
+    renderMillrollAging();
 }
 
 /* ── 앱 시작 ── */
