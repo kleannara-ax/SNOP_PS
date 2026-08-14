@@ -452,6 +452,9 @@ function init() {
     /* 밀롤창고 재공현황 초기화 */
     initMillrollInventory();
 
+    /* 밀롤창고 일별 재공현황 초기화 */
+    initMillrollDaily();
+
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
 
@@ -4861,6 +4864,130 @@ function initMillrollInventory() {
     }
 
     loadMillrollInventory();
+}
+
+/* ══════════════════════════════════════════════
+   밀롤창고 재공현황(일) — 일별 테이블
+   ══════════════════════════════════════════════ */
+
+/**
+ * 밀롤창고 일별 재공현황 테이블 렌더링
+ * 슬리터 외주 진행 내역 요약과 동일한 디자인 패턴
+ */
+function renderMillrollDailyTable(year, month) {
+    if (!year || !month) {
+        var now = new Date();
+        year = now.getFullYear();
+        month = now.getMonth() + 1;
+    }
+
+    var headerRow = document.getElementById('mr-daily-header-row');
+    var tbody = document.getElementById('mr-daily-tbody');
+    if (!headerRow || !tbody) return;
+
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* ── 헤더: 구분 + 내수구분 + 날짜 컬럼 ── */
+    headerRow.innerHTML = '';
+    var thMonth = document.createElement('th');
+    thMonth.className = 'outsource-th-month';
+    thMonth.colSpan = 2;
+    thMonth.textContent = month + '월';
+    headerRow.appendChild(thMonth);
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateObj = new Date(year, month - 1, d);
+        var dayIdx = dateObj.getDay();
+        var dayName = DAY_NAMES_KR[dayIdx];
+        var cls = 'outsource-date-th';
+        if (dayIdx === 0) cls += ' outsource-sun';
+        else if (dayIdx === 6) cls += ' outsource-sat';
+
+        var th = document.createElement('th');
+        th.className = cls;
+        th.innerHTML = d + '일<span class="outsource-date-day">(' + dayName + ')</span>';
+        headerRow.appendChild(th);
+    }
+
+    /* ── 행 구조 정의 ── */
+    var rowDefs = [
+        { key: 'bypass_domestic',    groupLabel: '우회',        groupRowspan: 3, subLabel: '내수',   rowClass: 'outsource-row-normal' },
+        { key: 'bypass_export',      groupLabel: null,                           subLabel: '수출',   rowClass: 'outsource-row-normal' },
+        { key: 'bypass_total',       groupLabel: null,          isSubTotal: true, subLabel: '계',    rowClass: 'outsource-row-daegi' },
+        { key: 'mill_domestic',      groupLabel: '밀롤창고재고', groupRowspan: 3, subLabel: '내수',   rowClass: 'outsource-row-normal' },
+        { key: 'mill_export',        groupLabel: null,                           subLabel: '수출',   rowClass: 'outsource-row-normal' },
+        { key: 'mill_total',         groupLabel: null,          isSubTotal: true, subLabel: '계',    rowClass: 'outsource-row-daegi' },
+        { key: 'all_domestic',       groupLabel: null,          isGrand: true,    subLabel: '',      rowClass: 'outsource-row-normal',  hidden: true },
+        { key: 'all_export',         groupLabel: null,          isGrand: true,    subLabel: '',      rowClass: 'outsource-row-normal',  hidden: true },
+        { key: 'grand_domestic',     groupLabel: '계',          groupRowspan: 3,  subLabel: '내수',  rowClass: 'outsource-row-normal' },
+        { key: 'grand_export',       groupLabel: null,                            subLabel: '수출',  rowClass: 'outsource-row-normal' },
+        { key: 'grand_total',        groupLabel: null,          isTotal: true,    subLabel: '총계',  rowClass: 'outsource-row-total' },
+    ];
+
+    tbody.innerHTML = '';
+
+    rowDefs.forEach(function (def) {
+        if (def.hidden) return;
+
+        var tr = document.createElement('tr');
+        tr.className = def.rowClass;
+        tr.dataset.mrDailyRow = def.key;
+
+        /* 그룹 라벨 (rowspan) */
+        if (def.groupLabel) {
+            var tdGroup = document.createElement('td');
+            tdGroup.className = 'outsource-group-label';
+            tdGroup.rowSpan = def.groupRowspan;
+            tdGroup.textContent = def.groupLabel;
+            tr.appendChild(tdGroup);
+        }
+
+        /* 서브 라벨 / 총계 라벨 */
+        var tdSub = document.createElement('td');
+        if (def.isTotal) {
+            tdSub.className = 'outsource-total-label';
+            tdSub.colSpan = 2;
+            tdSub.textContent = def.subLabel;
+        } else {
+            tdSub.className = 'outsource-sub-label';
+            tdSub.textContent = def.subLabel;
+        }
+        tr.appendChild(tdSub);
+
+        /* 날짜 데이터 셀 */
+        for (var dd = 1; dd <= daysInMonth; dd++) {
+            var td = document.createElement('td');
+            td.className = 'outsource-calc';
+            td.dataset.day = dd;
+            td.dataset.field = def.key;
+            td.textContent = '';
+            tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * 밀롤창고 일별 재공현황 초기화 — 월 선택기 + 렌더링
+ */
+function initMillrollDaily() {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth() + 1;
+
+    var monthInput = document.getElementById('mr-daily-month-selector');
+    if (monthInput) {
+        monthInput.value = year + '-' + String(month).padStart(2, '0');
+        monthInput.addEventListener('change', function () {
+            var parts = this.value.split('-');
+            if (parts.length === 2) {
+                renderMillrollDailyTable(parseInt(parts[0]), parseInt(parts[1]));
+            }
+        });
+    }
+
+    renderMillrollDailyTable(year, month);
 }
 
 /* ── 앱 시작 ── */
