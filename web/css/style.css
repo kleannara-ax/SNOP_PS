@@ -8289,7 +8289,7 @@ td.number {
 
 /* 테이블 기본 */
 .pkg-summary-table {
-    width: auto;
+    width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.82rem;
