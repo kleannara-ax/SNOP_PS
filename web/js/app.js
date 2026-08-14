@@ -4772,127 +4772,43 @@ function renderMillrollSummary() {
     /* ── tbody ── */
     var html = '';
 
-    /* 우회 / 밀롤 행 — 입력 가능 */
+    /* 우회 / 밀롤 행 — I/F 데이터 읽기전용 */
     rows.forEach(function (rowName) {
         html += '<tr>';
         html += '<td>' + rowName + '</td>';
         var total = 0;
         months.forEach(function (m) {
-            var mm = String(m).padStart(2, '0');
-            var ym = year + '-' + mm;
+            var ym = year + '-' + String(m).padStart(2, '0');
             var val = (millrollInventoryData[ym] && millrollInventoryData[ym][rowName]) || 0;
             total += val;
-            html += '<td class="pkg-input-cell">';
-            html += '<input type="number" class="mr-inv-input" data-row="' + rowName + '" data-month="' + mm + '" value="' + (val || '') + '" placeholder="-" step="0.1" />';
-            html += '</td>';
+            var display = val ? Number(val.toFixed(1)).toLocaleString() : '';
+            html += '<td class="pkg-data-cell">' + display + '</td>';
         });
         var avg = months.length > 0 ? Math.round((total / months.length) * 10) / 10 : 0;
-        html += '<td class="pkg-col-summary" id="mr-row-total-' + rowName + '">' + (total ? Number(total.toFixed(1)).toLocaleString() : '') + '</td>';
-        html += '<td class="pkg-col-summary" id="mr-row-avg-' + rowName + '">' + (avg ? Number(avg.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '<td class="pkg-col-summary">' + (total ? Number(total.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '<td class="pkg-col-summary">' + (avg ? Number(avg.toFixed(1)).toLocaleString() : '') + '</td>';
         html += '</tr>';
     });
 
-    /* 계 행 — 자동 합산 */
+    /* 계 행 — 우회 + 밀롤 자동 합산 */
     html += '<tr class="pkg-row-total">';
     html += '<td>계</td>';
     var grandTotal = 0;
     months.forEach(function (m) {
-        var mm = String(m).padStart(2, '0');
-        var ym = year + '-' + mm;
+        var ym = year + '-' + String(m).padStart(2, '0');
         var colSum = 0;
         rows.forEach(function (r) {
             colSum += (millrollInventoryData[ym] && millrollInventoryData[ym][r]) || 0;
         });
         grandTotal += colSum;
-        html += '<td id="mr-total-' + mm + '">' + (colSum ? Number(colSum.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '<td>' + (colSum ? Number(colSum.toFixed(1)).toLocaleString() : '') + '</td>';
     });
     var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
-    html += '<td class="pkg-col-summary" id="mr-grand-total">' + (grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '') + '</td>';
-    html += '<td class="pkg-col-summary" id="mr-grand-avg">' + (grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '') + '</td>';
     html += '</tr>';
 
     tbody.innerHTML = html;
-
-    /* ── 입력 이벤트 바인딩 ── */
-    var inputs = tbody.querySelectorAll('.mr-inv-input');
-    inputs.forEach(function (input) {
-        input.addEventListener('change', onMillrollInputChange);
-    });
-}
-
-/**
- * 밀롤 재공현황 입력값 변경 시 → 데이터 반영 + 계 재계산 + 자동 저장
- */
-function onMillrollInputChange(e) {
-    var input = e.target;
-    var rowName = input.getAttribute('data-row');
-    var mm = input.getAttribute('data-month');
-    var year = mrSelectedYear;
-    var ym = year + '-' + mm;
-    var val = parseFloat(input.value) || 0;
-
-    /* 데이터 객체 업데이트 */
-    if (!millrollInventoryData[ym]) millrollInventoryData[ym] = {};
-    millrollInventoryData[ym][rowName] = val;
-
-    /* 해당 월 계 셀 업데이트 */
-    var rows = ['우회', '밀롤'];
-    var colSum = 0;
-    rows.forEach(function (r) {
-        colSum += (millrollInventoryData[ym] && millrollInventoryData[ym][r]) || 0;
-    });
-    var totalCell = document.getElementById('mr-total-' + mm);
-    if (totalCell) totalCell.textContent = colSum ? Number(colSum.toFixed(1)).toLocaleString() : '';
-
-    /* 행별 총계/평균 업데이트 */
-    var now = new Date();
-    var isCurrentYear = (year === now.getFullYear());
-    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
-
-    rows.forEach(function (rn) {
-        var rowTotal = 0;
-        var cnt = 0;
-        for (var m = 1; m <= maxMonth; m++) {
-            var ymk = year + '-' + String(m).padStart(2, '0');
-            rowTotal += (millrollInventoryData[ymk] && millrollInventoryData[ymk][rn]) || 0;
-            cnt++;
-        }
-        var rowAvg = cnt > 0 ? Math.round((rowTotal / cnt) * 10) / 10 : 0;
-        var totalEl = document.getElementById('mr-row-total-' + rn);
-        var avgEl = document.getElementById('mr-row-avg-' + rn);
-        if (totalEl) totalEl.textContent = rowTotal ? Number(rowTotal.toFixed(1)).toLocaleString() : '';
-        if (avgEl) avgEl.textContent = rowAvg ? Number(rowAvg.toFixed(1)).toLocaleString() : '';
-    });
-
-    /* 계 행 총계/평균 업데이트 */
-    var grandTotal = 0;
-    for (var m = 1; m <= maxMonth; m++) {
-        var ymk = year + '-' + String(m).padStart(2, '0');
-        rows.forEach(function (r) {
-            grandTotal += (millrollInventoryData[ymk] && millrollInventoryData[ymk][r]) || 0;
-        });
-    }
-    var grandAvg = maxMonth > 0 ? Math.round((grandTotal / maxMonth) * 10) / 10 : 0;
-    var gtEl = document.getElementById('mr-grand-total');
-    var gaEl = document.getElementById('mr-grand-avg');
-    if (gtEl) gtEl.textContent = grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '';
-    if (gaEl) gaEl.textContent = grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '';
-
-    /* 자동 저장 */
-    saveMillrollInventory();
-}
-
-/**
- * 밀롤창고 재공현황 데이터 서버 저장 (백그라운드)
- */
-function saveMillrollInventory() {
-    fetch('/api/millroll-inventory/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: millrollInventoryData }),
-    }).catch(function (err) {
-        console.error('[밀롤 재공현황 저장 오류]', err);
-    });
 }
 
 /**
