@@ -8243,7 +8243,7 @@ td.number {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0;
+    margin-bottom: 12px;
 }
 /* 카드 제목 */
 .pkg-card-title {
