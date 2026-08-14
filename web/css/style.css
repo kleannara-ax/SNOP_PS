@@ -8243,7 +8243,7 @@ td.number {
 /* 카드 제목 */
 .pkg-card-title {
     margin: 0 0 4px;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #1e293b;
 }
