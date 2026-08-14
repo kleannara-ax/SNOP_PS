@@ -5057,17 +5057,17 @@ function renderMillrollAging() {
 
     var cols = ['under90', 'r90_150', 'r151_180', 'over180', 'sum'];
     var rows = [
-        { key: 'domestic', label: '내수',  rowClass: 'outsource-row-normal' },
-        { key: 'export',   label: '수출',  rowClass: 'outsource-row-normal' },
-        { key: 'total',    label: '계',    rowClass: 'outsource-row-total' },
+        { key: 'domestic', label: '내수',  rowClass: '' },
+        { key: 'export',   label: '수출',  rowClass: '' },
+        { key: 'total',    label: '계',    rowClass: 'pkg-row-total' },
     ];
 
     var html = '';
     rows.forEach(function (row) {
         html += '<tr class="' + row.rowClass + '">';
-        html += '<td class="outsource-sub-label">' + row.label + '</td>';
+        html += '<td>' + row.label + '</td>';
         cols.forEach(function (col) {
-            html += '<td class="outsource-calc" data-aging-row="' + row.key + '" data-aging-col="' + col + '">-</td>';
+            html += '<td data-aging-row="' + row.key + '" data-aging-col="' + col + '">-</td>';
         });
         html += '</tr>';
     });
