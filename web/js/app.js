@@ -4966,6 +4966,55 @@ function renderMillrollDailyTable(year, month) {
 
         tbody.appendChild(tr);
     });
+
+    /* 계 행 자동 합산 */
+    updateMillrollDailyCalc();
+}
+
+/**
+ * 밀롤창고 일별 재공현황 — 계 행 자동 합산
+ * I/F 데이터가 bypass_domestic/bypass_export/mill_domestic/mill_export 셀에 채워진 뒤 호출
+ * - bypass_total  = bypass_domestic + bypass_export   (우회 계)
+ * - mill_total    = mill_domestic + mill_export        (밀롤창고재고 계)
+ * - grand_domestic = bypass_domestic + mill_domestic   (계-내수)
+ * - grand_export   = bypass_export + mill_export       (계-수출)
+ * - grand_total    = grand_domestic + grand_export     (총계)
+ */
+function updateMillrollDailyCalc() {
+    var tbody = document.getElementById('mr-daily-tbody');
+    if (!tbody) return;
+
+    /* 일(day)별로 계산 */
+    var allCells = tbody.querySelectorAll('td[data-day][data-field]');
+    var cellMap = {};   // { day: { field: tdElement } }
+    allCells.forEach(function (td) {
+        var day = td.dataset.day;
+        var field = td.dataset.field;
+        if (!cellMap[day]) cellMap[day] = {};
+        cellMap[day][field] = td;
+    });
+
+    Object.keys(cellMap).forEach(function (day) {
+        var c = cellMap[day];
+        var bDom = parseFloat((c.bypass_domestic && c.bypass_domestic.textContent) || '') || 0;
+        var bExp = parseFloat((c.bypass_export && c.bypass_export.textContent) || '') || 0;
+        var mDom = parseFloat((c.mill_domestic && c.mill_domestic.textContent) || '') || 0;
+        var mExp = parseFloat((c.mill_export && c.mill_export.textContent) || '') || 0;
+
+        var bypassTotal = bDom + bExp;
+        var millTotal = mDom + mExp;
+        var grandDom = bDom + mDom;
+        var grandExp = bExp + mExp;
+        var grandTotal = grandDom + grandExp;
+
+        var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+
+        if (c.bypass_total) c.bypass_total.textContent = fmt(bypassTotal);
+        if (c.mill_total) c.mill_total.textContent = fmt(millTotal);
+        if (c.grand_domestic) c.grand_domestic.textContent = fmt(grandDom);
+        if (c.grand_export) c.grand_export.textContent = fmt(grandExp);
+        if (c.grand_total) c.grand_total.textContent = fmt(grandTotal);
+    });
 }
 
 /**
