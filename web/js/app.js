@@ -443,6 +443,9 @@ function init() {
     /* 슬리터 일자별 상세내역 중량 합계 계산 초기화 */
     initSlitterCalc();
 
+    /* 슬리터 월별 실적량 초기화 */
+    initSlitterMonthly();
+
     /* 슬리터 외주 진행 내역 초기화 */
     initOutsource();
 
@@ -3940,11 +3943,13 @@ function loadSlitterDetail() {
                 slitterDetailState.rows = [];
             }
             renderSlitterDetailTable();
+            loadSlitterMonthlyData();
         })
         .catch(function (err) {
             console.error('[슬리터 상세 로드 오류]', err);
             slitterDetailState.rows = [];
             renderSlitterDetailTable();
+            loadSlitterMonthlyData();
         });
 }
 
@@ -4033,6 +4038,162 @@ function initSlitterDetail() {
 /* initSlitterCalc — 하위 호환용 (init에서 호출됨) */
 function initSlitterCalc() {
     initSlitterDetail();
+}
+
+/* ══════════════════════════════════════════════
+   슬리터 월별 실적량
+   ══════════════════════════════════════════════ */
+
+var slitterMonthlyYear = new Date().getFullYear();
+var slitterMonthlyRows = [];  // 연도 전체 rows (load-year API에서 수신)
+
+/**
+ * 서버에서 해당 연도 전체 슬리터 상세 데이터를 로드하여 월별 실적량 렌더링
+ */
+function loadSlitterMonthlyData() {
+    var year = slitterMonthlyYear;
+    fetch('/api/slitter-detail/load-year?year=' + encodeURIComponent(year))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                slitterMonthlyRows = result.data.rows || [];
+            } else {
+                slitterMonthlyRows = [];
+            }
+            renderSlitterMonthly();
+        })
+        .catch(function (err) {
+            console.error('[슬리터 월별 데이터 로드 오류]', err);
+            slitterMonthlyRows = [];
+            renderSlitterMonthly();
+        });
+}
+
+/**
+ * 슬리터 월별 실적량 테이블 렌더링
+ * slitterMonthlyRows (연도 전체 데이터)를 월별·내수구분별로 집계
+ * 행: 내수, 수출, 총합계(자동 합산)
+ */
+function renderSlitterMonthly() {
+    var thead = document.getElementById('slitter-monthly-thead');
+    var tbody = document.getElementById('slitter-monthly-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = slitterMonthlyYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
+
+    /* ── 월별 집계: slitterMonthlyRows에서 추출 ── */
+    var monthlyData = {};  // { '01': { domestic: 0, export: 0 }, ... }
+    months.forEach(function (m) {
+        monthlyData[String(m).padStart(2, '0')] = { domestic: 0, export: 0 };
+    });
+
+    var allRows = slitterMonthlyRows || [];
+    allRows.forEach(function (row) {
+        /* 필드명: date(작업일자), domestic(내수구분), weight(실적량 KG) */
+        var dateVal = row.date || row.작업일자 || '';
+        if (!dateVal) return;
+        var parts = String(dateVal).split('-');
+        if (parts.length < 3) return;
+        var rowYear = parseInt(parts[0]);
+        var rowMonth = parts[1];  // '01' ~ '12'
+        if (rowYear !== year) return;
+        if (!monthlyData[rowMonth]) return;
+
+        var kg = parseFloat(row.weight || row.실적량) || 0;
+        var ton = kg / 1000;
+        var category = (row.domestic || row.내수구분 || '').trim();
+        if (category === '수출') {
+            monthlyData[rowMonth].export += ton;
+        } else {
+            monthlyData[rowMonth].domestic += ton;
+        }
+    });
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '<th>총계</th><th>평균</th></tr>';
+    thead.innerHTML = thRow;
+
+    /* ── tbody ── */
+    var rows = [
+        { key: 'domestic', label: '내수' },
+        { key: 'export',   label: '수출' },
+    ];
+    var html = '';
+    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+
+    rows.forEach(function (row) {
+        html += '<tr>';
+        html += '<td>' + row.label + '</td>';
+        var total = 0;
+        months.forEach(function (m) {
+            var mm = String(m).padStart(2, '0');
+            var val = monthlyData[mm] ? monthlyData[mm][row.key] : 0;
+            val = Math.round(val * 10) / 10;
+            total += val;
+            html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
+        });
+        var avg = months.length > 0 ? Math.round((total / months.length) * 10) / 10 : 0;
+        html += '<td class="pkg-col-summary">' + fmt(total) + '</td>';
+        html += '<td class="pkg-col-summary">' + fmt(avg) + '</td>';
+        html += '</tr>';
+    });
+
+    /* 총합계 행 */
+    html += '<tr class="pkg-row-total">';
+    html += '<td>총합계</td>';
+    var grandTotal = 0;
+    months.forEach(function (m) {
+        var mm = String(m).padStart(2, '0');
+        var d = monthlyData[mm] ? monthlyData[mm].domestic : 0;
+        var e = monthlyData[mm] ? monthlyData[mm].export : 0;
+        var colSum = Math.round((d + e) * 10) / 10;
+        grandTotal += colSum;
+        html += '<td>' + fmt(colSum) + '</td>';
+    });
+    var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
+    html += '<td class="pkg-col-summary">' + fmt(grandTotal) + '</td>';
+    html += '<td class="pkg-col-summary">' + fmt(grandAvg) + '</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 슬리터 월별 실적량 초기화
+ */
+function initSlitterMonthly() {
+    var now = new Date();
+    var monthDay = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 기준';
+
+    var dateLabel = document.getElementById('slitter-monthly-date-label');
+    if (dateLabel) dateLabel.textContent = monthDay;
+
+    var yearSelect = document.getElementById('slitter-monthly-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === slitterMonthlyYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            slitterMonthlyYear = parseInt(this.value);
+            loadSlitterMonthlyData();
+        });
+    }
+
+    /* 연도 전체 데이터 로드 → 렌더링 */
+    loadSlitterMonthlyData();
 }
 
 /* ══════════════════════════════════════════════
