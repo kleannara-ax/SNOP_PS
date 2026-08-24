@@ -1069,6 +1069,23 @@ def api_slitter_detail_save():
     })
 
 
+@app.route('/api/slitter-detail/load-year', methods=['GET'])
+def api_slitter_detail_load_year():
+    """슬리터 일자별 상세 내역 — 해당 연도 전체 월 데이터 로드 (월별 실적량 집계용)"""
+    year = request.args.get('year', '').strip()
+    if not year:
+        return jsonify({'success': False, 'message': 'year 파라미터 필요'}), 400
+
+    all_data = load_json_file(SLITTER_DETAIL_FILE, {})
+    year_rows = []
+    for ym_key, record in all_data.items():
+        if ym_key.startswith(year + '-'):
+            rows = record.get('rows', [])
+            year_rows.extend(rows)
+
+    return jsonify({'success': True, 'data': {'year': year, 'rows': year_rows}})
+
+
 # ═══════════════════════════════════════════════
 # 슬리터 외주 진행 내역 API
 # ═══════════════════════════════════════════════
