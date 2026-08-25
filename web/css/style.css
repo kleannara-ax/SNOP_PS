@@ -271,6 +271,7 @@ main {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     margin-bottom: 0;
+    align-items: stretch;
 }
 @media (max-width: 1200px) {
     .slitter-detail-grid {
@@ -295,6 +296,7 @@ main {
 .slitter-chart-card {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 .slitter-chart-wrap {
     flex: 1;
