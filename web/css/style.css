@@ -8356,7 +8356,7 @@ td.number {
 
 /* 데이터 셀 (월별 I/F 영역) */
 .pkg-summary-table .pkg-data-cell {
-    background: #fffcf0;
+    background: #fff;
     color: #334155;
     font-weight: 500;
 }
