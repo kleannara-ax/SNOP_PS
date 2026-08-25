@@ -2405,8 +2405,9 @@ function calcSubulbu(daysInMonth, dailyTotal, dailyWork, prevMonthLastGimal) {
         /* 계 = 내수 + 수출 */
         var gyeVal = Math.round((naesuVal + suchulVal) * 10) / 10;
 
-        /* 입고 = 기말 + 계 - 기초 */
+        /* 입고 = 기말 + 계 - 기초 (음수이면 0) */
         var ipgoVal = Math.round((gimalVal + gyeVal - kichoVal) * 10) / 10;
+        if (ipgoVal < 0) ipgoVal = 0;
 
         kicho.push(kichoVal);
         ipgo.push(ipgoVal);
@@ -2503,7 +2504,13 @@ function renderSubulbuTable(year, month) {
             const val = rowDef.data[d] || 0;
             const td = document.createElement('td');
             td.className = 'subulbu-data';
-            td.textContent = val ? val.toFixed(1) : '';
+            /* 입고 행: 음수→0 보정값도 "0.0" 표시 (기말 데이터 있는 날) */
+            if (rowDef.key === 'ipgo') {
+                var hasGimal = (calc.gimal[d] || 0) !== 0;
+                td.textContent = (val || hasGimal) ? val.toFixed(1) : '';
+            } else {
+                td.textContent = val ? val.toFixed(1) : '';
+            }
             tr.appendChild(td);
         }
 
