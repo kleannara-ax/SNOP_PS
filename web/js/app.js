@@ -4257,12 +4257,12 @@ function renderPackagingSummary() {
             var ym = year + '-' + String(m).padStart(2, '0');
             var val = (packagingData[ym] && packagingData[ym][rowName]) || 0;
             total += val;
-            var display = val ? Number(val.toFixed(1)).toLocaleString() : '';
+            var display = val ? Math.round(val).toLocaleString() : '';
             html += '<td class="pkg-data-cell">' + display + '</td>';
         });
-        var avg = months.length > 0 ? Math.round((total / months.length) * 10) / 10 : 0;
-        html += '<td class="pkg-col-summary">' + (total ? Number(total.toFixed(1)).toLocaleString() : '') + '</td>';
-        html += '<td class="pkg-col-summary">' + (avg ? Number(avg.toFixed(1)).toLocaleString() : '') + '</td>';
+        var avg = months.length > 0 ? Math.round(total / months.length) : 0;
+        html += '<td class="pkg-col-summary">' + (total ? Math.round(total).toLocaleString() : '') + '</td>';
+        html += '<td class="pkg-col-summary">' + (avg ? avg.toLocaleString() : '') + '</td>';
         html += '</tr>';
     });
 
@@ -4280,11 +4280,11 @@ function renderPackagingSummary() {
         });
         monthlyTotals[mm] = colSum;
         grandTotal += colSum;
-        html += '<td id="pkg-total-' + mm + '">' + (colSum ? Number(colSum.toFixed(1)).toLocaleString() : '') + '</td>';
+        html += '<td id="pkg-total-' + mm + '">' + (colSum ? Math.round(colSum).toLocaleString() : '') + '</td>';
     });
-    var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
-    html += '<td class="pkg-col-summary" id="pkg-total-sum">' + (grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '') + '</td>';
-    html += '<td class="pkg-col-summary" id="pkg-total-avg">' + (grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '') + '</td>';
+    var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
+    html += '<td class="pkg-col-summary" id="pkg-total-sum">' + (grandTotal ? Math.round(grandTotal).toLocaleString() : '') + '</td>';
+    html += '<td class="pkg-col-summary" id="pkg-total-avg">' + (grandAvg ? grandAvg.toLocaleString() : '') + '</td>';
     html += '</tr>';
 
     /* 최대CAPA 행 — 해당월 일수 × 일CAPA (자동계산) */
