@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260824a">
+    <link rel="stylesheet" href="css/style.css?v=20260825a">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -874,6 +874,23 @@
                         </div>
                     </div>
 
+                    <!-- ── 월별 실적량 (일자별 상세내역 카드 내부) ── -->
+                    <div class="slitter-monthly-section">
+                        <div class="slitter-monthly-header">
+                            <div>
+                                <h4 class="slitter-monthly-title">월별 실적량</h4>
+                                <p class="slitter-monthly-sub"><span id="slitter-monthly-date-label"></span>, 단위 : ton</p>
+                            </div>
+                            <select id="slitter-monthly-year-filter" class="pkg-year-select"></select>
+                        </div>
+                        <div class="pkg-table-wrap">
+                            <table class="pkg-summary-table" id="slitter-monthly-table">
+                                <thead id="slitter-monthly-thead"></thead>
+                                <tbody id="slitter-monthly-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- 오른쪽 카드: 상하 2분할 차트 -->
@@ -905,27 +922,6 @@
                             <canvas id="outsource-stock-chart"></canvas>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- ── 슬리터 월별 실적량 ── -->
-            <div class="pkg-layout">
-                <div class="pkg-card pkg-card-left">
-                    <div class="pkg-card-header">
-                        <div>
-                            <h3 class="pkg-card-title">월별 실적량</h3>
-                            <p class="pkg-card-sub"><span id="slitter-monthly-date-label"></span>, 단위 : ton</p>
-                        </div>
-                        <select id="slitter-monthly-year-filter" class="pkg-year-select"></select>
-                    </div>
-                    <div class="pkg-table-wrap">
-                        <table class="pkg-summary-table" id="slitter-monthly-table">
-                            <thead id="slitter-monthly-thead"></thead>
-                            <tbody id="slitter-monthly-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="pkg-right-stack">
                 </div>
             </div>
 
@@ -1575,6 +1571,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260824a"></script>
+<script src="js/app.js?v=20260825a"></script>
 </body>
 </html>
