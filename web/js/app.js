@@ -5000,11 +5000,13 @@ function loadMillrollInventory() {
                 millrollInventoryData = {};
             }
             renderMillrollSummary();
+            renderMrInventoryTable();
         })
         .catch(function (err) {
             console.error('[밀롤 재공현황 로드 오류]', err);
             millrollInventoryData = {};
             renderMillrollSummary();
+            renderMrInventoryTable();
         });
 }
 
@@ -5037,6 +5039,88 @@ function initMillrollInventory() {
     }
 
     loadMillrollInventory();
+}
+
+/* ══════════════════════════════════════════════
+   밀롤창고 재고현황 — 지종코드별·평량별 비중 테이블
+   ══════════════════════════════════════════════ */
+
+/**
+ * 밀롤창고 재고현황 테이블 렌더링
+ * millrollInventoryData에서 지종코드별 총 중량, 중량 비중, 평량별 비중을 계산하여 표시
+ * 데이터 구조 (millroll_inventory.json):
+ *   { "stock": [ { "paper_code": "S11", "basis_weight": 300, "weight": 120.5 }, ... ] }
+ */
+function renderMrInventoryTable() {
+    var tbody = document.getElementById('mr-inventory-tbody');
+    if (!tbody) return;
+
+    var stockData = millrollInventoryData.stock || [];
+
+    if (stockData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">데이터 없음</td></tr>';
+        return;
+    }
+
+    /* ── 1) 지종코드별 집계 ── */
+    var codeMap = {};
+    var grandTotal = 0;
+
+    stockData.forEach(function (item) {
+        var code = item.paper_code || '';
+        var bw = item.basis_weight || 0;
+        var w = Number(item.weight) || 0;
+
+        if (!codeMap[code]) codeMap[code] = { total: 0, weights: {} };
+        codeMap[code].total += w;
+        codeMap[code].weights[bw] = (codeMap[code].weights[bw] || 0) + w;
+        grandTotal += w;
+    });
+
+    /* ── 2) 지종코드를 총 중량 내림차순 정렬 ── */
+    var codes = Object.keys(codeMap).sort(function (a, b) {
+        return codeMap[b].total - codeMap[a].total;
+    });
+
+    /* ── 3) HTML 생성 (rowspan으로 지종코드 병합) ── */
+    var html = '';
+
+    codes.forEach(function (code) {
+        var group = codeMap[code];
+        var codeTotal = group.total;
+        var codeRatio = grandTotal > 0 ? Math.round(codeTotal / grandTotal * 100) : 0;
+
+        var bwKeys = Object.keys(group.weights).sort(function (a, b) {
+            return Number(a) - Number(b);
+        });
+        var rowCount = bwKeys.length || 1;
+
+        bwKeys.forEach(function (bw, bIdx) {
+            var bwWeight = group.weights[bw];
+            var bwRatio = codeTotal > 0 ? Math.round(bwWeight / codeTotal * 100) : 0;
+
+            html += '<tr class="' + (bIdx === 0 ? 'mr-inv-group-first' : '') + '">';
+
+            if (bIdx === 0) {
+                html += '<td class="mr-inv-group" rowspan="' + rowCount + '">' + code + '</td>';
+                html += '<td class="mr-inv-weight" rowspan="' + rowCount + '">' + Math.round(codeTotal).toLocaleString() + '</td>';
+                html += '<td class="mr-inv-ratio" rowspan="' + rowCount + '">' + codeRatio + '%</td>';
+            }
+
+            html += '<td>' + Number(bw) + 'g</td>';
+
+            html += '<td>';
+            html += '<div class="mr-inv-bar-wrap">';
+            html += '<div class="mr-inv-bar"><div class="mr-inv-bar-fill" style="width:' + bwRatio + '%"></div></div>';
+            html += '<span>' + bwRatio + '%</span>';
+            html += '</div>';
+            html += '</td>';
+
+            html += '</tr>';
+        });
+    });
+
+    tbody.innerHTML = html;
 }
 
 /* ══════════════════════════════════════════════
