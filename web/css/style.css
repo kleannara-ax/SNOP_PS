@@ -8748,3 +8748,19 @@ td.number {
 .mr-detail-table td.mr-detail-wt {
     font-weight: 600; color: #1e293b;
 }
+
+/* ── 밀롤창고 재고현황 지종코드 클릭 인터랙션 ── */
+.mr-inv-clickable {
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+}
+.mr-inv-clickable:hover {
+    background: #eff6ff !important;
+    color: #2563eb;
+}
+.mr-inv-clickable.mr-inv-active {
+    background: #2563eb !important;
+    color: #ffffff;
+    border-radius: 0;
+}
