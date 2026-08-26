@@ -8215,7 +8215,7 @@ td.number {
 .pkg-layout {
     display: flex;
     gap: 24px;
-    align-items: stretch;
+    align-items: flex-start;
 }
 .pkg-card-left {
     flex: 1;
@@ -8224,16 +8224,12 @@ td.number {
 .pkg-right-stack {
     flex: 1;
     min-width: 0;
-    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 24px;
-    overflow: hidden;
 }
 .pkg-card-right {
     min-width: 0;
-    min-height: 200px;
-    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;

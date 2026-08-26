@@ -5197,6 +5197,25 @@ function renderMrInventoryDetail() {
     });
 
     tbody.innerHTML = html;
+
+    /* 왼쪽 카드 높이에 맞춰 오른쪽 카드 max-height 동기화 */
+    syncMrCardHeight();
+}
+
+/** 밀롤창고 상단 왼쪽/오른쪽 카드 높이 동기화 */
+function syncMrCardHeight() {
+    var layout = document.querySelector('[data-table-panel="mill-roll"] .pkg-layout');
+    if (!layout) return;
+    var left = layout.querySelector('.pkg-card-left');
+    var right = layout.querySelector('.pkg-card-right');
+    if (!left || !right) return;
+    /* 왼쪽 높이를 기준으로 오른쪽 max-height 설정 */
+    requestAnimationFrame(function () {
+        var h = left.offsetHeight;
+        if (h > 0) {
+            right.style.maxHeight = h + 'px';
+        }
+    });
 }
 
 /* ══════════════════════════════════════════════
