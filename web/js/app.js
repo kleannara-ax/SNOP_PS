@@ -2891,7 +2891,7 @@ function onOutsourceInput(e) {
 /**
  * 자동 계산 로직:
  * - 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적  (1일은: 입고 - 슬리팅실적)
- * - 보관재고 = 슬리팅 입고 - 출고
+ * - 보관재고 = 전날 보관재고 + 슬리팅 입고 - 출고  (누적)
  * - 계 = 대기재고 + 보관재고
  * + 각 행의 합계 (맨 오른쪽 컬럼)
  */
@@ -2906,7 +2906,8 @@ function recalcOutsource() {
     /* 행별 합계 누적용 */
     const rowSums = { cheongju: 0, ipgo: 0, slitting: 0, daegi: 0, slit_ipgo: 0, chulgo: 0, bogwan: 0, total: 0 };
 
-    let prevDaegi = 0;  // 전날 대기재고
+    let prevDaegi = 0;   // 전날 대기재고
+    let prevBogwan = 0;  // 전날 보관재고
 
     for (let d = 1; d <= daysInMonth; d++) {
         const dayData = outsourceState.days[d] || {};
@@ -2920,8 +2921,8 @@ function recalcOutsource() {
         /* 대기재고 = 전날 대기재고 + 입고 - 슬리팅실적 */
         const daegi = prevDaegi + ipgo - slitting;
 
-        /* 보관재고 = 슬리팅 입고 - 출고 */
-        const bogwan = slit_ipgo - chulgo;
+        /* 보관재고 = 전날 보관재고 + 슬리팅 입고 - 출고 (누적) */
+        const bogwan = prevBogwan + slit_ipgo - chulgo;
 
         /* 계 = 대기재고 + 보관재고 */
         const total = daegi + bogwan;
@@ -2952,6 +2953,7 @@ function recalcOutsource() {
         rowSums.total     += total;
 
         prevDaegi = daegi;
+        prevBogwan = bogwan;
     }
 
     /* 행별 합계 셀 업데이트 */
