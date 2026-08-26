@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260826b">
+    <link rel="stylesheet" href="css/style.css?v=20260826c">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -747,46 +747,48 @@
                 </div>
             </div>
 
-            <!-- ── 밀롤창고 재고현황 ── -->
-            <div class="slitter-card outsource-card">
-                <div class="outsource-card-header">
-                    <h3 class="outsource-title">밀롤창고 재고현황</h3>
-                    <span class="outsource-unit-label">단위 : ton</span>
-                </div>
-                <div class="table-scroll-container">
-                    <div class="table-wrapper" style="overflow-x:auto;">
-                        <table class="outsource-table mr-inventory-table" id="mr-inventory-table">
-                            <thead>
-                                <tr>
-                                    <th>지종코드</th>
-                                    <th>총 중량(ton)</th>
-                                    <th>중량 비중</th>
-                                    <th>평량</th>
-                                    <th>평량 비중</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mr-inventory-tbody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <div class="pkg-layout">
-                <!-- 왼쪽: 밀롤창고 재공현황 월별 요약 표 -->
+                <!-- 왼쪽: 밀롤창고 재고현황 + 월별 재공현황 통합 -->
                 <div class="pkg-card pkg-card-left">
-                    <div class="pkg-card-header">
-                        <div>
-                            <h3 class="pkg-card-title">밀롤창고 월별 재공현황</h3>
-                            <p class="pkg-card-sub"><span id="mr-date-label"></span>, 단위 : ton</p>
+                    <!-- ── 밀롤창고 재고현황 영역 ── -->
+                    <div class="mr-inv-section">
+                        <div class="mr-inv-section-header">
+                            <h3 class="pkg-card-title">밀롤창고 재고현황</h3>
+                            <span class="outsource-unit-label">단위 : ton</span>
                         </div>
-                        <select id="mr-year-filter" class="pkg-year-select"></select>
+                        <div class="pkg-table-wrap">
+                            <table class="outsource-table mr-inventory-table" id="mr-inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>지종코드</th>
+                                        <th>총 중량(ton)</th>
+                                        <th>중량 비중</th>
+                                        <th>평량</th>
+                                        <th>평량 비중</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mr-inventory-tbody">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="pkg-table-wrap">
-                        <table class="pkg-summary-table" id="mr-summary-table">
-                            <thead id="mr-summary-thead"></thead>
-                            <tbody id="mr-summary-tbody"></tbody>
-                        </table>
+                    <!-- ── 구분선 ── -->
+                    <hr class="mr-section-divider">
+                    <!-- ── 밀롤창고 월별 재공현황 영역 ── -->
+                    <div class="mr-monthly-section">
+                        <div class="pkg-card-header">
+                            <div>
+                                <h3 class="pkg-card-title">밀롤창고 월별 재공현황</h3>
+                                <p class="pkg-card-sub"><span id="mr-date-label"></span>, 단위 : ton</p>
+                            </div>
+                            <select id="mr-year-filter" class="pkg-year-select"></select>
+                        </div>
+                        <div class="pkg-table-wrap">
+                            <table class="pkg-summary-table" id="mr-summary-table">
+                                <thead id="mr-summary-thead"></thead>
+                                <tbody id="mr-summary-tbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 <!-- 오른쪽: 추후 차트 등 확장 영역 -->
@@ -1596,6 +1598,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260826b"></script>
+<script src="js/app.js?v=20260826c"></script>
 </body>
 </html>

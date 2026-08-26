@@ -8718,3 +8718,19 @@ td.number {
 .mr-inventory-table tr.mr-inv-group-first td {
     border-top: 2px solid #e2e8f0;
 }
+
+/* ── 밀롤창고 재고현황 + 월별 재공현황 통합 카드 ── */
+.mr-inv-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.mr-section-divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px 0;
+}
+.mr-monthly-section {
+    /* 월별 재공현황 영역 — 구분선 아래 */
+}
