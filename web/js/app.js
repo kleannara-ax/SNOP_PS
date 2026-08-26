@@ -5064,7 +5064,6 @@ function renderMrInventoryTable() {
 
     /* ── 1) 지종코드별 집계 ── */
     var codeMap = {};
-    var grandTotal = 0;
 
     stockData.forEach(function (item) {
         var code = item.paper_code || '';
@@ -5074,8 +5073,15 @@ function renderMrInventoryTable() {
         if (!codeMap[code]) codeMap[code] = { total: 0, weights: {} };
         codeMap[code].total += w;
         codeMap[code].weights[bw] = (codeMap[code].weights[bw] || 0) + w;
-        grandTotal += w;
     });
+
+    /* 중량 비중: 전체 지종코드 총중량(grand_total_ton) 대비 비율 */
+    var grandTotal = Number(millrollInventoryData.grand_total_ton) || 0;
+    if (grandTotal <= 0) {
+        /* fallback: JSON에 grand_total_ton 없으면 stock 합계 사용 */
+        grandTotal = 0;
+        stockData.forEach(function (item) { grandTotal += Number(item.weight) || 0; });
+    }
 
     /* ── 2) 지종코드를 총 중량 내림차순 정렬 ── */
     var codes = Object.keys(codeMap).sort(function (a, b) {
