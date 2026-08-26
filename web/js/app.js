@@ -4988,9 +4988,23 @@ function renderMillrollSummary() {
 }
 
 /**
+ * 밀롤창고 날짜 라벨 (시스템날짜 전날 기준)
+ */
+function setMrDateLabel() {
+    var el = document.getElementById('mr-date-label');
+    if (!el) return;
+    var yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    var m = yesterday.getMonth() + 1;
+    var d = yesterday.getDate();
+    el.textContent = m + '월 ' + d + '일 기준';
+}
+
+/**
  * 밀롤창고 재공현황 데이터 로드
  */
 function loadMillrollInventory() {
+    setMrDateLabel();
     fetch('/api/millroll-inventory/load')
         .then(function (res) { return res.json(); })
         .then(function (result) {
