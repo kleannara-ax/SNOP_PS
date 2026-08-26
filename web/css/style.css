@@ -8511,7 +8511,7 @@ td.number {
 
 /* ── thead (상단 틀고정) ── */
 .pkg-daily-table thead th {
-    background: #ffffff;
+    background: #f1f5f9;
     color: #334155;
     font-weight: 600;
     padding: 10px 12px;
@@ -8530,14 +8530,14 @@ td.number {
     left: 0;
     z-index: 30;
     min-width: 72px;
-    background: #ffffff;
+    background: #f1f5f9;
 }
 .pkg-daily-table thead th.pkd-sticky-col2 {
     position: sticky;
     left: 72px;
     z-index: 30;
     min-width: 52px;
-    background: #ffffff;
+    background: #f1f5f9;
 }
 .pkg-daily-table thead th.pkd-sticky-col2::after {
     content: '';
