@@ -8215,7 +8215,7 @@ td.number {
 .pkg-layout {
     display: flex;
     gap: 24px;
-    align-items: flex-start;
+    align-items: stretch;
 }
 .pkg-card-left {
     flex: 1;
@@ -8231,6 +8231,7 @@ td.number {
 .pkg-card-right {
     min-width: 0;
     min-height: 200px;
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -8737,7 +8738,7 @@ td.number {
 
 /* ── 밀롤창고 재고 상세 테이블 ── */
 .mr-detail-scroll {
-    max-height: 600px;
+    flex: 1;
     overflow-y: auto;
 }
 .mr-detail-table td.mr-detail-bw {
