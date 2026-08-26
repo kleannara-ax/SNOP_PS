@@ -5110,7 +5110,8 @@ function renderMrInventoryTable() {
             html += '<tr class="' + (bIdx === 0 ? 'mr-inv-group-first' : '') + '">';
 
             if (bIdx === 0) {
-                html += '<td class="mr-inv-group" rowspan="' + rowCount + '">' + code + '</td>';
+                var activeClass = (code === mrDetailFilterCode) ? ' mr-inv-active' : '';
+                html += '<td class="mr-inv-group mr-inv-clickable' + activeClass + '" rowspan="' + rowCount + '" data-mr-code="' + code + '">' + code + '</td>';
                 html += '<td class="mr-inv-weight" rowspan="' + rowCount + '">' + Math.round(codeTotal).toLocaleString() + '</td>';
                 html += '<td class="mr-inv-ratio" rowspan="' + rowCount + '">' + codeRatio + '%</td>';
             }
@@ -5127,9 +5128,30 @@ function renderMrInventoryTable() {
             html += '</tr>';
         });
     });
-
     tbody.innerHTML = html;
+
+    /* ── 지종코드 클릭 이벤트 (이벤트 위임) ── */
+    tbody.onclick = function (e) {
+        var td = e.target.closest('[data-mr-code]');
+        if (!td) return;
+        var code = td.getAttribute('data-mr-code');
+        /* 같은 코드 재클릭 → 해제 (전체 보기) */
+        if (mrDetailFilterCode === code) {
+            mrDetailFilterCode = null;
+        } else {
+            mrDetailFilterCode = code;
+        }
+        /* 선택 상태 UI 갱신 */
+        tbody.querySelectorAll('.mr-inv-clickable').forEach(function (el) {
+            el.classList.toggle('mr-inv-active', el.getAttribute('data-mr-code') === mrDetailFilterCode);
+        });
+        /* 오른쪽 상세 테이블 필터 적용 */
+        renderMrInventoryDetail();
+    };
 }
+
+/* ── 밀롤창고 재고 상세 필터 상태 ── */
+var mrDetailFilterCode = null;
 
 /**
  * 밀롤창고 재고 상세 테이블 렌더링
@@ -5139,9 +5161,18 @@ function renderMrInventoryDetail() {
     var tbody = document.getElementById('mr-detail-tbody');
     if (!tbody) return;
 
-    var detailData = millrollInventoryData.detail || [];
+    var allDetail = millrollInventoryData.detail || [];
+    /* 필터 적용: 선택된 지종코드가 있으면 해당 데이터만 표시 */
+    var detailData = mrDetailFilterCode
+        ? allDetail.filter(function (d) { return d.paper_code === mrDetailFilterCode; })
+        : allDetail;
+
     if (detailData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">데이터 없음</td></tr>';
+        var msg = mrDetailFilterCode
+            ? (mrDetailFilterCode + ' 데이터 없음')
+            : '데이터 없음';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">' + msg + '</td></tr>';
+        syncMrCardHeight();
         return;
     }
 
