@@ -8234,6 +8234,7 @@ td.number {
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 .pkg-chart-wrap {
     flex: 1;
@@ -8739,6 +8740,7 @@ td.number {
 /* ── 밀롤창고 재고 상세 테이블 ── */
 .mr-detail-scroll {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 .mr-detail-table td.mr-detail-bw {
