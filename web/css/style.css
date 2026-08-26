@@ -8760,7 +8760,7 @@ td.number {
     color: #2563eb;
 }
 .mr-inv-clickable.mr-inv-active {
-    background: #2563eb !important;
-    color: #ffffff;
+    background: #dbeafe !important;
+    color: #1e40af;
     border-radius: 0;
 }
