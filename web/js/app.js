@@ -5001,12 +5001,14 @@ function loadMillrollInventory() {
             }
             renderMillrollSummary();
             renderMrInventoryTable();
+            renderMrInventoryDetail();
         })
         .catch(function (err) {
             console.error('[밀롤 재공현황 로드 오류]', err);
             millrollInventoryData = {};
             renderMillrollSummary();
             renderMrInventoryTable();
+            renderMrInventoryDetail();
         });
 }
 
@@ -5123,6 +5125,74 @@ function renderMrInventoryTable() {
             html += '</td>';
 
             html += '</tr>';
+        });
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 밀롤창고 재고 상세 테이블 렌더링
+ * 지종 > 평량 rowspan 병합 + 규격/롤수/중량 표시
+ */
+function renderMrInventoryDetail() {
+    var tbody = document.getElementById('mr-detail-tbody');
+    if (!tbody) return;
+
+    var detailData = millrollInventoryData.detail || [];
+    if (detailData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">데이터 없음</td></tr>';
+        return;
+    }
+
+    /* ── 지종 > 평량 > 규격 계층 구조 빌드 ── */
+    var codeOrder = [];
+    var codeMap = {};
+
+    detailData.forEach(function (item) {
+        var code = item.paper_code || '';
+        var bw = item.basis_weight || 0;
+        if (!codeMap[code]) {
+            codeMap[code] = { bwOrder: [], bwMap: {}, totalRows: 0 };
+            codeOrder.push(code);
+        }
+        var cm = codeMap[code];
+        if (!cm.bwMap[bw]) {
+            cm.bwMap[bw] = [];
+            cm.bwOrder.push(bw);
+        }
+        cm.bwMap[bw].push(item);
+        cm.totalRows++;
+    });
+
+    /* ── HTML 생성 ── */
+    var html = '';
+    codeOrder.forEach(function (code) {
+        var cm = codeMap[code];
+        var codeFirstRow = true;
+
+        cm.bwOrder.forEach(function (bw) {
+            var items = cm.bwMap[bw];
+            items.forEach(function (item, idx) {
+                var isGroupFirst = codeFirstRow && idx === 0;
+                html += '<tr class="' + (isGroupFirst ? 'mr-inv-group-first' : '') + '">';
+
+                /* 지종 rowspan */
+                if (codeFirstRow && idx === 0) {
+                    html += '<td class="mr-inv-group" rowspan="' + cm.totalRows + '">' + code + '</td>';
+                }
+
+                /* 평량 rowspan */
+                if (idx === 0) {
+                    html += '<td class="mr-detail-bw" rowspan="' + items.length + '">' + Number(bw) + '</td>';
+                }
+
+                html += '<td>' + (item.spec || '') + '</td>';
+                html += '<td>' + (item.roll_count || 0) + '</td>';
+                html += '<td class="mr-detail-wt">' + (Number(item.weight_ton) || 0).toFixed(1) + '</td>';
+                html += '</tr>';
+            });
+            codeFirstRow = false;
         });
     });
 

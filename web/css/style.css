@@ -8734,3 +8734,16 @@ td.number {
 .mr-monthly-section {
     /* 월별 재공현황 영역 — 구분선 아래 */
 }
+
+/* ── 밀롤창고 재고 상세 테이블 ── */
+.mr-detail-scroll {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.mr-detail-table td.mr-detail-bw {
+    font-weight: 600; color: #334155;
+    border-right: 1px solid #edf0f4;
+}
+.mr-detail-table td.mr-detail-wt {
+    font-weight: 600; color: #1e293b;
+}
