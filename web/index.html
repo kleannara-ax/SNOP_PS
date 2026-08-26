@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260826a">
+    <link rel="stylesheet" href="css/style.css?v=20260826b">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -744,6 +744,31 @@
                 <div>
                     <h2>밀롤창고</h2>
                     <p>밀롤창고 재공실적 현황을 조회하고 분석합니다.</p>
+                </div>
+            </div>
+
+            <!-- ── 밀롤창고 재고현황 ── -->
+            <div class="slitter-card outsource-card">
+                <div class="outsource-card-header">
+                    <h3 class="outsource-title">밀롤창고 재고현황</h3>
+                    <span class="outsource-unit-label">단위 : ton</span>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="outsource-table mr-inventory-table" id="mr-inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>지종코드</th>
+                                    <th>총 중량(ton)</th>
+                                    <th>중량 비중</th>
+                                    <th>평량</th>
+                                    <th>평량 비중</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mr-inventory-tbody">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1571,6 +1596,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260826a"></script>
+<script src="js/app.js?v=20260826b"></script>
 </body>
 </html>
