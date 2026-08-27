@@ -4366,6 +4366,9 @@ function renderPackagingSummary() {
     /* 가동율 차트 렌더링 */
     renderPkgRateChart();
 
+    /* 지관별 월별 실적 차트 렌더링 */
+    renderPkgInchChart();
+
     /* 왼쪽 카드 높이에 맞춰 오른쪽 가동율 카드 높이 동기화 */
     syncPkgCardHeight();
 }
@@ -4505,6 +4508,133 @@ function renderPkgRateChart() {
                         font: { size: 11 },
                         color: '#64748b',
                         callback: function (v) { return v + '%'; }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+}
+
+/* ── 지관별 월별 실적 차트 (3/6/12인치 그룹 바) ── */
+var pkgInchChart = null;
+
+function renderPkgInchChart() {
+    var canvas = document.getElementById('pkg-inch-chart');
+    if (!canvas) return;
+
+    var now = new Date();
+    var year = pkgSelectedYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var labels = [];
+    var data3 = [];
+    var data6 = [];
+    var data12 = [];
+
+    for (var m = 1; m <= maxMonth; m++) {
+        var mm = String(m).padStart(2, '0');
+        var ym = year + '-' + mm;
+        labels.push(m + '월');
+        var v3 = (packagingData[ym] && packagingData[ym]['3인치']) || 0;
+        var v6 = (packagingData[ym] && packagingData[ym]['6인치']) || 0;
+        var v12 = (packagingData[ym] && packagingData[ym]['12인치']) || 0;
+        data3.push(v3 ? parseFloat(v3.toFixed(1)) : 0);
+        data6.push(v6 ? parseFloat(v6.toFixed(1)) : 0);
+        data12.push(v12 ? parseFloat(v12.toFixed(1)) : 0);
+    }
+
+    if (pkgInchChart) {
+        pkgInchChart.data.labels = labels;
+        pkgInchChart.data.datasets[0].data = data3;
+        pkgInchChart.data.datasets[1].data = data6;
+        pkgInchChart.data.datasets[2].data = data12;
+        pkgInchChart.update();
+        return;
+    }
+
+    pkgInchChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '3인치',
+                    data: data3,
+                    backgroundColor: '#3b82f6',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 3,
+                    barPercentage: 0.75,
+                    categoryPercentage: 0.7
+                },
+                {
+                    label: '6인치',
+                    data: data6,
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#d97706',
+                    borderWidth: 1,
+                    borderRadius: 3,
+                    barPercentage: 0.75,
+                    categoryPercentage: 0.7
+                },
+                {
+                    label: '12인치',
+                    data: data12,
+                    backgroundColor: '#10b981',
+                    borderColor: '#059669',
+                    borderWidth: 1,
+                    borderRadius: 3,
+                    barPercentage: 0.75,
+                    categoryPercentage: 0.7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded',
+                        padding: 14,
+                        font: { size: 11.5, weight: '600' },
+                        color: '#334155'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 13, weight: '600' },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function (ctx) {
+                            return ' ' + ctx.dataset.label + ': ' + (ctx.parsed.y !== null ? ctx.parsed.y.toLocaleString() + ' ton' : '—');
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { font: { size: 11 }, color: '#64748b' },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#64748b',
+                        callback: function (v) { return v.toLocaleString(); }
                     },
                     grid: { color: 'rgba(0,0,0,0.05)' }
                 }
