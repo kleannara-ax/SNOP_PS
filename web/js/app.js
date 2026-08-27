@@ -4365,6 +4365,25 @@ function renderPackagingSummary() {
 
     /* 가동율 차트 렌더링 */
     renderPkgRateChart();
+
+    /* 왼쪽 카드 높이에 맞춰 오른쪽 가동율 카드 높이 동기화 */
+    syncPkgCardHeight();
+}
+
+/** 원지포장 왼쪽(지관/월별 실적량) ↔ 오른쪽(월별 가동율 추이) 카드 높이 동기화 */
+function syncPkgCardHeight() {
+    var left = document.getElementById('pkg-summary-card');
+    var right = document.getElementById('pkg-rate-card');
+    if (!left || !right) return;
+    requestAnimationFrame(function () {
+        right.style.height = '';
+        right.style.maxHeight = '';
+        var h = left.offsetHeight;
+        if (h > 0) {
+            right.style.height = h + 'px';
+            right.style.maxHeight = h + 'px';
+        }
+    });
 }
 
 /* ── 가동율 꺾은선 차트 (Chart.js) ── */
@@ -5710,6 +5729,12 @@ function initMillrollAging() {
     renderMillrollAging();
     loadMillrollAging();
 }
+
+/* ── 윈도우 리사이즈 시 카드 높이 재동기화 ── */
+window.addEventListener('resize', function () {
+    syncMrCardHeight();
+    syncPkgCardHeight();
+});
 
 /* ── 앱 시작 ── */
 document.addEventListener('DOMContentLoaded', init);
