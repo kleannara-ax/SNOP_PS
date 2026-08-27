@@ -5343,7 +5343,8 @@ function renderMillrollDailyTable(year, month) {
         var tdSub = document.createElement('td');
         if (def.isTotal) {
             tdSub.className = 'outsource-total-label';
-            tdSub.colSpan = 2;
+            /* 그룹 rowspan 밖의 독립 총계 행이면 colSpan=2, 그룹 내 총계면 colSpan=1 */
+            tdSub.colSpan = def.groupLabel ? 2 : 1;
             tdSub.textContent = def.subLabel;
         } else {
             tdSub.className = 'outsource-sub-label';
