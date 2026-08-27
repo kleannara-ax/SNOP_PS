@@ -5409,13 +5409,15 @@ function updateMillrollDailyCalc() {
         var grandExp = bExp + mExp;
         var grandTotal = grandDom + grandExp;
 
+        /* 데이터가 있는 날짜인지 확인 — 4개 데이터 셀 모두 빈칸이면 계 행도 빈칸 */
+        var hasData = bDom || bExp || mDom || mExp;
         var fmt = function (v) { return Number((v || 0).toFixed(1)).toLocaleString(); };
 
-        if (c.bypass_total) c.bypass_total.textContent = fmt(bypassTotal);
-        if (c.mill_total) c.mill_total.textContent = fmt(millTotal);
-        if (c.grand_domestic) c.grand_domestic.textContent = fmt(grandDom);
-        if (c.grand_export) c.grand_export.textContent = fmt(grandExp);
-        if (c.grand_total) c.grand_total.textContent = fmt(grandTotal);
+        if (c.bypass_total) c.bypass_total.textContent = hasData ? fmt(bypassTotal) : '';
+        if (c.mill_total) c.mill_total.textContent = hasData ? fmt(millTotal) : '';
+        if (c.grand_domestic) c.grand_domestic.textContent = hasData ? fmt(grandDom) : '';
+        if (c.grand_export) c.grand_export.textContent = hasData ? fmt(grandExp) : '';
+        if (c.grand_total) c.grand_total.textContent = hasData ? fmt(grandTotal) : '';
     });
 }
 
@@ -5472,7 +5474,8 @@ function fillMillrollDailyCells() {
         var day = parseInt(td.dataset.day);
         var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
         var dayData = millrollDailyData[dateKey];
-        var val = (dayData && dayData[field]) || 0;
+        if (!dayData) { td.textContent = ''; return; }
+        var val = dayData[field] || 0;
         td.textContent = fmt(val);
     });
 
