@@ -8525,6 +8525,25 @@ td.number {
     margin-top: 0;
 }
 
+/* ── 하단 차트 2개 가로 배치 (지관별 월별 실적 + 일자별 실적 추이) ── */
+.pkg-bottom-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    align-items: stretch;
+}
+.pkg-bottom-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.pkg-bottom-card .pkg-chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 320px;
+}
+
 /* ── 일자별 실적량 테이블 (캡처 기반 미니멀 디자인) ── */
 .pkg-card-daily {
     margin-top: 24px;

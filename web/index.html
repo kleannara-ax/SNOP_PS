@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260827b">
+    <link rel="stylesheet" href="css/style.css?v=20260827c">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1131,16 +1131,31 @@
                             <canvas id="pkg-rate-chart"></canvas>
                         </div>
                     </div>
-                    <div class="pkg-card pkg-card-right pkg-card-daily-chart">
-                        <div class="pkg-card-header">
-                            <div>
-                                <h3 class="pkg-card-title">일자별 실적 추이</h3>
-                                <p class="pkg-card-sub"><span id="pkg-daily-chart-label"></span>, 단위 : ton</p>
-                            </div>
+                </div>
+            </div>
+
+            <!-- 하단 차트 2개: 지관별 월별 실적 + 일자별 실적 추이 -->
+            <div class="pkg-bottom-row">
+                <div class="pkg-card pkg-bottom-card" id="pkg-inch-chart-card">
+                    <div class="pkg-card-header">
+                        <div>
+                            <h3 class="pkg-card-title">지관별 월별 실적</h3>
+                            <p class="pkg-card-sub">단위 : ton</p>
                         </div>
-                        <div class="pkg-chart-wrap">
-                            <canvas id="pkg-daily-chart"></canvas>
+                    </div>
+                    <div class="pkg-chart-wrap">
+                        <canvas id="pkg-inch-chart"></canvas>
+                    </div>
+                </div>
+                <div class="pkg-card pkg-bottom-card" id="pkg-daily-chart-card">
+                    <div class="pkg-card-header">
+                        <div>
+                            <h3 class="pkg-card-title">일자별 실적 추이</h3>
+                            <p class="pkg-card-sub"><span id="pkg-daily-chart-label"></span>, 단위 : ton</p>
                         </div>
+                    </div>
+                    <div class="pkg-chart-wrap">
+                        <canvas id="pkg-daily-chart"></canvas>
                     </div>
                 </div>
             </div>
@@ -1626,6 +1641,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260827b"></script>
+<script src="js/app.js?v=20260827c"></script>
 </body>
 </html>
