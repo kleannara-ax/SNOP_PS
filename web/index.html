@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260826x">
+    <link rel="stylesheet" href="css/style.css?v=20260826y">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -864,8 +864,16 @@
                         </table>
                     </div>
                 </div>
-                <!-- 오른쪽: 그래프 영역 -->
+                <!-- 오른쪽: 월령분석 그래프 -->
                 <div class="pkg-right-stack">
+                    <div class="pkg-card pkg-card-right">
+                        <div class="pkg-card-header">
+                            <h3 class="pkg-card-title">월령분석 차트</h3>
+                        </div>
+                        <div class="pkg-chart-wrap">
+                            <canvas id="mr-aging-chart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1618,6 +1626,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260826x"></script>
+<script src="js/app.js?v=20260826y"></script>
 </body>
 </html>

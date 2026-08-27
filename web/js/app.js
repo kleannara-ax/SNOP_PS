@@ -5622,6 +5622,85 @@ function fillMillrollAgingCells(data) {
     });
 
     updateMillrollAgingCalc();
+    renderMillrollAgingChart(data);
+}
+
+/**
+ * 월령분석 막대 그래프 렌더링 — 내수/수출 그룹 바 차트
+ */
+var mrAgingChart = null;
+function renderMillrollAgingChart(data) {
+    var ctx = document.getElementById('mr-aging-chart');
+    if (!ctx) return;
+
+    if (mrAgingChart) { mrAgingChart.destroy(); mrAgingChart = null; }
+
+    var labels = ['90일 미만', '90~150일', '151~180일', '180일 초과'];
+    var cols = ['under90', 'r90_150', 'r151_180', 'over180'];
+    var dom = data.domestic || {};
+    var exp = data['export'] || {};
+
+    var domData = cols.map(function (c) { return dom[c] || 0; });
+    var expData = cols.map(function (c) { return exp[c] || 0; });
+
+    mrAgingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '내수',
+                    data: domData,
+                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: '수출',
+                    data: expData,
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { font: { size: 12 }, usePointStyle: true, pointStyle: 'rectRounded' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + Number(ctx.parsed.y.toFixed(1)).toLocaleString() + ' ton';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (v) { return v.toLocaleString(); }
+                    },
+                    title: {
+                        display: true,
+                        text: 'ton',
+                        font: { size: 11 },
+                        color: '#94a3b8'
+                    }
+                }
+            }
+        }
+    });
 }
 
 /**
