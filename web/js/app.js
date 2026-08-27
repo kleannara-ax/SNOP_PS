@@ -5393,10 +5393,14 @@ function updateMillrollDailyCalc() {
 
     Object.keys(cellMap).forEach(function (day) {
         var c = cellMap[day];
-        var bDom = parseFloat((c.bypass_domestic && c.bypass_domestic.textContent) || '') || 0;
-        var bExp = parseFloat((c.bypass_export && c.bypass_export.textContent) || '') || 0;
-        var mDom = parseFloat((c.mill_domestic && c.mill_domestic.textContent) || '') || 0;
-        var mExp = parseFloat((c.mill_export && c.mill_export.textContent) || '') || 0;
+        var parseCell = function (td) {
+            var t = (td && td.textContent) || '';
+            return parseFloat(t.replace(/,/g, '')) || 0;
+        };
+        var bDom = parseCell(c.bypass_domestic);
+        var bExp = parseCell(c.bypass_export);
+        var mDom = parseCell(c.mill_domestic);
+        var mExp = parseCell(c.mill_export);
 
         var bypassTotal = bDom + bExp;
         var millTotal = mDom + mExp;
