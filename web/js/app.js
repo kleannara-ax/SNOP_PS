@@ -5415,7 +5415,67 @@ function updateMillrollDailyCalc() {
 }
 
 /**
- * 밀롤창고 일별 재공현황 초기화 — 월 선택기 + 렌더링
+ * 밀롤창고 일별 재공현황 — 서버 데이터 로드 후 셀에 채우기
+ */
+var millrollDailyData = {};  // { "2026-08-25": { bypass_domestic, bypass_export, mill_domestic, mill_export } }
+
+function loadMillrollDaily() {
+    fetch('/api/millroll-daily/load')
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                millrollDailyData = result.data;
+            } else {
+                millrollDailyData = {};
+            }
+            fillMillrollDailyCells();
+        })
+        .catch(function (err) {
+            console.error('[밀롤 일별 재공현황 로드 오류]', err);
+            millrollDailyData = {};
+        });
+}
+
+/**
+ * millrollDailyData를 테이블 셀에 채우고 계 행 자동 합산
+ */
+function fillMillrollDailyCells() {
+    var tbody = document.getElementById('mr-daily-tbody');
+    if (!tbody) return;
+
+    var dataFields = ['bypass_domestic', 'bypass_export', 'mill_domestic', 'mill_export'];
+    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+
+    /* 현재 테이블의 year/month 추출 */
+    var monthInput = document.getElementById('mr-daily-month-selector');
+    var year, month;
+    if (monthInput && monthInput.value) {
+        var parts = monthInput.value.split('-');
+        year = parseInt(parts[0]);
+        month = parseInt(parts[1]);
+    } else {
+        var now = new Date();
+        year = now.getFullYear();
+        month = now.getMonth() + 1;
+    }
+
+    var cells = tbody.querySelectorAll('td[data-day][data-field]');
+    cells.forEach(function (td) {
+        var field = td.dataset.field;
+        if (dataFields.indexOf(field) === -1) return;  // 계산 필드는 건너뜀
+
+        var day = parseInt(td.dataset.day);
+        var dateKey = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        var dayData = millrollDailyData[dateKey];
+        var val = (dayData && dayData[field]) || 0;
+        td.textContent = fmt(val);
+    });
+
+    updateMillrollDailyCalc();
+}
+
+/**
+ * 밀롤창고 일별 재공현황 초기화 — 월 선택기 + 렌더링 + 데이터 로드
  */
 function initMillrollDaily() {
     var now = new Date();
@@ -5429,11 +5489,13 @@ function initMillrollDaily() {
             var parts = this.value.split('-');
             if (parts.length === 2) {
                 renderMillrollDailyTable(parseInt(parts[0]), parseInt(parts[1]));
+                fillMillrollDailyCells();
             }
         });
     }
 
     renderMillrollDailyTable(year, month);
+    loadMillrollDaily();
 }
 
 /* ══════════════════════════════════════════════
