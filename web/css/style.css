@@ -8088,6 +8088,42 @@ td.number {
     border-right: 1px solid #edf0f4;
 }
 
+/* ── 밀롤 일별 재공현황 좌측 틀고정 ── */
+#mr-daily-table .mrd-sticky-col1 {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: inherit;
+}
+#mr-daily-table thead .mrd-sticky-col1 {
+    z-index: 5;
+    background: #f6f8fb;
+}
+#mr-daily-table .mrd-sticky-col2 {
+    position: sticky;
+    left: 72px;
+    z-index: 3;
+    background: inherit;
+}
+#mr-daily-table thead .mrd-sticky-col2 {
+    z-index: 5;
+}
+#mr-daily-table .mrd-sticky-col2::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; right: -4px;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0,0,0,0.04), transparent);
+    pointer-events: none;
+}
+/* 행별 배경 상속 — sticky 셀에 직접 배경 부여 */
+.outsource-row-normal .mrd-sticky-col1,
+.outsource-row-normal .mrd-sticky-col2 { background: #fff; }
+.outsource-row-daegi .mrd-sticky-col1,
+.outsource-row-daegi .mrd-sticky-col2 { background: #eff6ff; }
+.outsource-row-total .mrd-sticky-col1,
+.outsource-row-total .mrd-sticky-col2 { background: #f6f8fb; }
+
 /* 일반 행 + hover */
 .outsource-row-normal td {
     background: #fff;

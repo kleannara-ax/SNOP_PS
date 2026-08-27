@@ -5287,7 +5287,7 @@ function renderMillrollDailyTable(year, month) {
     /* ── 헤더: 구분 + 내수구분 + 날짜 컬럼 ── */
     headerRow.innerHTML = '';
     var thMonth = document.createElement('th');
-    thMonth.className = 'outsource-th-month';
+    thMonth.className = 'outsource-th-month mrd-sticky-col1';
     thMonth.colSpan = 2;
     thMonth.textContent = month + '월';
     headerRow.appendChild(thMonth);
@@ -5333,7 +5333,7 @@ function renderMillrollDailyTable(year, month) {
         /* 그룹 라벨 (rowspan) */
         if (def.groupLabel) {
             var tdGroup = document.createElement('td');
-            tdGroup.className = 'outsource-group-label';
+            tdGroup.className = 'outsource-group-label mrd-sticky-col1';
             tdGroup.rowSpan = def.groupRowspan;
             tdGroup.textContent = def.groupLabel;
             tr.appendChild(tdGroup);
@@ -5342,12 +5342,12 @@ function renderMillrollDailyTable(year, month) {
         /* 서브 라벨 / 총계 라벨 */
         var tdSub = document.createElement('td');
         if (def.isTotal) {
-            tdSub.className = 'outsource-total-label';
+            tdSub.className = 'outsource-total-label mrd-sticky-col2';
             /* 그룹 rowspan 밖의 독립 총계 행이면 colSpan=2, 그룹 내 총계면 colSpan=1 */
             tdSub.colSpan = def.groupLabel ? 2 : 1;
             tdSub.textContent = def.subLabel;
         } else {
-            tdSub.className = 'outsource-sub-label';
+            tdSub.className = 'outsource-sub-label mrd-sticky-col2';
             tdSub.textContent = def.subLabel;
         }
         tr.appendChild(tdSub);
