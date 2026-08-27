@@ -8254,11 +8254,11 @@ td.number {
     align-items: flex-start;
 }
 .pkg-card-left {
-    flex: 1;
+    flex: 0 0 calc(50% - 12px);
     min-width: 0;
 }
 .pkg-right-stack {
-    flex: 1;
+    flex: 0 0 calc(50% - 12px);
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -8533,7 +8533,7 @@ td.number {
     align-items: stretch;
 }
 .pkg-bottom-card {
-    flex: 1;
+    flex: 0 0 calc(50% - 12px);
     min-width: 0;
     display: flex;
     flex-direction: column;
