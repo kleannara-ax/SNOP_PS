@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260827a">
+    <link rel="stylesheet" href="css/style.css?v=20260827b">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1107,7 +1107,7 @@
             </div>
             <div class="pkg-layout">
                 <!-- 왼쪽: 월별 요약 테이블 -->
-                <div class="pkg-card pkg-card-left">
+                <div class="pkg-card pkg-card-left" id="pkg-summary-card">
                     <div class="pkg-card-header">
                         <div>
                             <h3 class="pkg-card-title">지관/월별 실적량</h3>
@@ -1124,7 +1124,7 @@
                 </div>
                 <!-- 오른쪽: 차트 2개 세로 배치 -->
                 <div class="pkg-right-stack">
-                    <div class="pkg-card pkg-card-right">
+                    <div class="pkg-card pkg-card-right" id="pkg-rate-card">
                         <h3 class="pkg-card-title">월별 가동율 추이</h3>
                         <p class="pkg-card-sub">단위 : %</p>
                         <div class="pkg-chart-wrap">
@@ -1626,6 +1626,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260827a"></script>
+<script src="js/app.js?v=20260827b"></script>
 </body>
 </html>
