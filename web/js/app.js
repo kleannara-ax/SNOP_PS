@@ -5586,10 +5586,50 @@ function updateMillrollAgingCalc() {
 }
 
 /**
+ * 밀롤창고 월령분석 — 서버 데이터 로드 후 셀에 채우기
+ */
+function loadMillrollAging() {
+    fetch('/api/millroll-aging/load')
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                fillMillrollAgingCells(result.data);
+            }
+        })
+        .catch(function (err) {
+            console.error('[밀롤 월령분석 로드 오류]', err);
+        });
+}
+
+/**
+ * 월령분석 데이터를 셀에 채우고 계 행 자동 합산
+ */
+function fillMillrollAgingCells(data) {
+    var tbody = document.getElementById('mr-aging-tbody');
+    if (!tbody) return;
+
+    var dataCols = ['under90', 'r90_150', 'r151_180', 'over180'];
+    var fmt = function (v) { return Number((v || 0).toFixed(1)).toLocaleString(); };
+
+    ['domestic', 'export'].forEach(function (rowKey) {
+        var rowData = data[rowKey] || {};
+        dataCols.forEach(function (col) {
+            var td = tbody.querySelector('td[data-aging-row="' + rowKey + '"][data-aging-col="' + col + '"]');
+            if (td) {
+                td.textContent = fmt(rowData[col] || 0);
+            }
+        });
+    });
+
+    updateMillrollAgingCalc();
+}
+
+/**
  * 밀롤창고 월령분석 초기화
  */
 function initMillrollAging() {
     renderMillrollAging();
+    loadMillrollAging();
 }
 
 /* ── 앱 시작 ── */
