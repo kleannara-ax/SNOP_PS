@@ -511,6 +511,7 @@ SLITTER_SUBULBU_WORK_FILE = os.path.join(DATA_DIR, 'slitter_subulbu_work.json')
 
 # ─── 밀롤창고 재공현황 데이터 파일 ───
 MILLROLL_INVENTORY_FILE = os.path.join(DATA_DIR, 'millroll_inventory.json')
+MILLROLL_DAILY_FILE = os.path.join(DATA_DIR, 'millroll_daily.json')
 
 
 def load_json_file(filepath, default=None):
@@ -1546,6 +1547,29 @@ def api_millroll_inventory_save():
     data = body.get('data', {})
     save_json_file(MILLROLL_INVENTORY_FILE, data)
     return jsonify({'success': True, 'message': '밀롤창고 재공현황 저장 완료'})
+
+
+# ═══════════════════════════════════════════════════
+# 밀롤창고 일별 재공현황 API
+# ═══════════════════════════════════════════════════
+
+@app.route('/api/millroll-daily/load', methods=['GET'])
+def api_millroll_daily_load():
+    """밀롤창고 일별 재공현황 데이터 로드"""
+    data = load_json_file(MILLROLL_DAILY_FILE, {})
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/millroll-daily/save', methods=['POST'])
+def api_millroll_daily_save():
+    """밀롤창고 일별 재공현황 데이터 저장"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    data = body.get('data', {})
+    save_json_file(MILLROLL_DAILY_FILE, data)
+    return jsonify({'success': True, 'message': '밀롤창고 일별 재공현황 저장 완료'})
 
 
 if __name__ == '__main__':
