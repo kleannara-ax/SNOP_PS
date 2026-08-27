@@ -5409,7 +5409,7 @@ function updateMillrollDailyCalc() {
         var grandExp = bExp + mExp;
         var grandTotal = grandDom + grandExp;
 
-        var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+        var fmt = function (v) { return Number((v || 0).toFixed(1)).toLocaleString(); };
 
         if (c.bypass_total) c.bypass_total.textContent = fmt(bypassTotal);
         if (c.mill_total) c.mill_total.textContent = fmt(millTotal);
@@ -5449,7 +5449,7 @@ function fillMillrollDailyCells() {
     if (!tbody) return;
 
     var dataFields = ['bypass_domestic', 'bypass_export', 'mill_domestic', 'mill_export'];
-    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+    var fmt = function (v) { return Number((v || 0).toFixed(1)).toLocaleString(); };
 
     /* 현재 테이블의 year/month 추출 */
     var monthInput = document.getElementById('mr-daily-month-selector');
