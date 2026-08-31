@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260827d">
+    <link rel="stylesheet" href="css/style.css?v=20260831a">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -70,10 +70,17 @@
                     <button class="sidebar-submenu-item" data-table-sub="packaging">원지포장</button>
                 </div>
             </div>
-            <button class="sidebar-menu-item" data-view="line-capa" data-tooltip="생산계획 현황">
-                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                <span class="sidebar-label">생산계획 현황</span>
-            </button>
+            <div class="sidebar-group" id="sidebar-group-linecapa">
+                <button class="sidebar-menu-item has-children" data-view="line-capa" data-tooltip="생산계획 현황">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span class="sidebar-label">생산계획 현황</span>
+                    <svg class="sidebar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="sidebar-submenu" id="linecapa-submenu">
+                    <button class="sidebar-submenu-item active" data-lc-sub="capa-status">CAPA 현황</button>
+                    <button class="sidebar-submenu-item" data-lc-sub="manual-plan">수작업</button>
+                </div>
+            </div>
             <button class="sidebar-menu-item" data-view="dashboard" data-tooltip="재고 예측">
                 <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span class="sidebar-label">재고 예측</span>
@@ -1189,22 +1196,44 @@
             <p>라인별 생산능력(CAPA) 대비 계획 물량 현황을 모니터링합니다.</p>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-            <!-- Usage Panel -->
-            <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
-                <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">CAPA 사용률 현황</h3>
-                <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 월간 CAPA 사용률을 차트로 확인합니다.</p>
-                <div style="height:300px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
-                    <canvas id="line-capa-usage-chart"></canvas>
+        <!-- ── CAPA 현황 패널 ── -->
+        <div class="lc-sub-section active" data-lc-panel="capa-status">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                <!-- Usage Panel -->
+                <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+                    <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">CAPA 사용률 현황</h3>
+                    <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 월간 CAPA 사용률을 차트로 확인합니다.</p>
+                    <div style="height:300px;display:flex;align-items:center;justify-content:center;color:#94a3b8;">
+                        <canvas id="line-capa-usage-chart"></canvas>
+                    </div>
+                    <p id="line-capa-usage-empty" style="text-align:center;color:#94a3b8;font-size:0.9rem;">데이터를 등록하면 차트가 표시됩니다.</p>
                 </div>
-                <p id="line-capa-usage-empty" style="text-align:center;color:#94a3b8;font-size:0.9rem;">데이터를 등록하면 차트가 표시됩니다.</p>
+                <!-- Cards -->
+                <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
+                    <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">라인별 CAPA 카드</h3>
+                    <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 가동률 및 상세 정보를 확인합니다.</p>
+                    <div id="line-capa-cards" style="display:flex;flex-direction:column;gap:12px;">
+                        <p style="text-align:center;color:#94a3b8;padding:40px 0;">등록된 라인 CAPA 정보가 없습니다.</p>
+                    </div>
+                </div>
             </div>
-            <!-- Cards -->
-            <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 5px 15px rgba(15,23,42,0.08);">
-                <h3 style="margin:0 0 8px;font-size:1.1rem;color:#0f172a;">라인별 CAPA 카드</h3>
-                <p style="margin:0 0 20px;color:#6b7280;font-size:0.9rem;">라인별 가동률 및 상세 정보를 확인합니다.</p>
-                <div id="line-capa-cards" style="display:flex;flex-direction:column;gap:12px;">
-                    <p style="text-align:center;color:#94a3b8;padding:40px 0;">등록된 라인 CAPA 정보가 없습니다.</p>
+        </div>
+
+        <!-- ── 수작업 패널 ── -->
+        <div class="lc-sub-section" data-lc-panel="manual-plan">
+            <div class="pkg-card" style="margin-bottom:0;">
+                <div class="pkg-card-header">
+                    <div>
+                        <h3 class="pkg-card-title">수작업 생산 계획량 환산</h3>
+                        <p class="pkg-card-sub">제품별 생산 계획 물량을 월별로 관리합니다. 단위 : ton</p>
+                    </div>
+                    <select id="manual-plan-month-filter" class="pkg-year-select"></select>
+                </div>
+                <div class="pkg-daily-table-wrap" style="max-height:none;">
+                    <table class="mp-table" id="manual-plan-table">
+                        <thead id="manual-plan-thead"></thead>
+                        <tbody id="manual-plan-tbody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1641,6 +1670,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260827d"></script>
+<script src="js/app.js?v=20260831a"></script>
 </body>
 </html>

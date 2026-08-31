@@ -9,6 +9,7 @@ const state = {
     activeView: 'summary',
     activePlannerSub: 'obsolete-status',
     activeTableSub: 'mill-roll',       // 재공실적 분석 서브탭 (밀롤창고/슬리터/카타/원지포장)
+    activeLcSub: 'capa-status',       // 생산계획 현황 서브탭 (CAPA 현황/수작업)
     activeIfSub: 'if-master',
     activeHistoryTab: 'production',
     openTabs: ['summary'],     // 열린 탭 목록
@@ -55,6 +56,9 @@ const dom = {
     ifSubTabs: document.getElementById('if-sub-tabs'),
     ifSubTabButtons: Array.from(document.querySelectorAll('.if-sub-tab')),
     ifSubSections: Array.from(document.querySelectorAll('.if-sub-section')),
+    /* 생산계획 현황 */
+    lcSubTabButtons: Array.from(document.querySelectorAll('.sidebar-submenu-item[data-lc-sub]')),
+    lcSubSections: Array.from(document.querySelectorAll('.lc-sub-section')),
 };
 
 /* ══════════════════════════════════════════════
@@ -222,6 +226,26 @@ function switchTableSubTab(subName) {
 }
 
 /* ══════════════════════════════════════════════
+   생산계획 현황 서브탭 전환
+   ══════════════════════════════════════════════ */
+function switchLcSubTab(subName) {
+    state.activeLcSub = subName;
+
+    dom.lcSubTabButtons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.lcSub === subName);
+    });
+
+    dom.lcSubSections.forEach(function (section) {
+        var isActive = section.dataset.lcPanel === subName;
+        section.classList.toggle('active', isActive);
+    });
+
+    if (subName === 'manual-plan') {
+        initManualPlan();
+    }
+}
+
+/* ══════════════════════════════════════════════
    인터페이스 관리 서브탭 전환
    ══════════════════════════════════════════════ */
 function switchIfSubTab(subName) {
@@ -317,6 +341,31 @@ function bindEvents() {
             } else {
                 switchView('table');
                 tableGroup.classList.add('open');
+            }
+        });
+    }
+
+    /* 생산계획 현황 사이드바 서브메뉴 클릭 */
+    dom.lcSubTabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            switchView('line-capa');
+            switchLcSubTab(btn.dataset.lcSub);
+            dom.lcSubTabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+        });
+    });
+
+    /* 생산계획 현황 부모 메뉴 클릭 시 서브메뉴 토글 */
+    var lcParent = document.querySelector('.sidebar-menu-item[data-view="line-capa"]');
+    var lcGroup = document.getElementById('sidebar-group-linecapa');
+    if (lcParent && lcGroup) {
+        lcParent.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var isOpen = lcGroup.classList.contains('open');
+            if (isOpen && state.activeView === 'line-capa') {
+                lcGroup.classList.remove('open');
+            } else {
+                switchView('line-capa');
+                lcGroup.classList.add('open');
             }
         });
     }
@@ -5858,6 +5907,121 @@ function renderMillrollAgingChart(data) {
 function initMillrollAging() {
     renderMillrollAging();
     loadMillrollAging();
+}
+
+/* ══════════════════════════════════════════════
+   수작업 생산 계획량 환산
+   ══════════════════════════════════════════════ */
+var manualPlanData = {};           /* { '2026-08': { rows: [ { product, weight, ... } ] } } */
+var manualPlanMonth = '';          /* 현재 선택된 월 YYYY-MM */
+var manualPlanInited = false;
+
+function initManualPlan() {
+    if (manualPlanInited) {
+        renderManualPlanTable();
+        return;
+    }
+    manualPlanInited = true;
+
+    var now = new Date();
+    var curY = now.getFullYear();
+    var curM = now.getMonth() + 1;
+    manualPlanMonth = curY + '-' + String(curM).padStart(2, '0');
+
+    /* 월 필터 옵션 생성 (현재월 포함 ±6개월) */
+    var sel = document.getElementById('manual-plan-month-filter');
+    if (sel) {
+        sel.innerHTML = '';
+        for (var i = -6; i <= 6; i++) {
+            var mm = curM + i;
+            var yy = curY;
+            while (mm <= 0) { mm += 12; yy--; }
+            while (mm > 12) { mm -= 12; yy++; }
+            var val = yy + '-' + String(mm).padStart(2, '0');
+            var opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = yy + '년 ' + mm + '월';
+            if (val === manualPlanMonth) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        sel.addEventListener('change', function () {
+            manualPlanMonth = this.value;
+            renderManualPlanTable();
+        });
+    }
+
+    loadManualPlanData();
+}
+
+function loadManualPlanData() {
+    fetch('/api/manual-plan/load')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.success && res.data) manualPlanData = res.data;
+            renderManualPlanTable();
+        })
+        .catch(function () {
+            renderManualPlanTable();
+        });
+}
+
+function renderManualPlanTable() {
+    var thead = document.getElementById('manual-plan-thead');
+    var tbody = document.getElementById('manual-plan-tbody');
+    if (!thead || !tbody) return;
+
+    var ym = manualPlanMonth;
+    var monthData = manualPlanData[ym] || {};
+    var rows = monthData.rows || [];
+
+    /* ── 정적 컬럼 정의 ── */
+    var cols = [
+        { key: 'product', label: '제품명' },
+        { key: 'spec', label: '규격' },
+        { key: 'plan_qty', label: '계획량' },
+        { key: 'unit_weight', label: '단중(ton)' },
+        { key: 'converted_ton', label: '환산량(ton)' }
+    ];
+
+    /* thead */
+    var thHtml = '<tr>';
+    cols.forEach(function (c) {
+        thHtml += '<th>' + c.label + '</th>';
+    });
+    thHtml += '</tr>';
+    thead.innerHTML = thHtml;
+
+    /* tbody */
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#94a3b8;padding:32px;">선택된 월의 계획 데이터가 없습니다.</td></tr>';
+        return;
+    }
+
+    var html = '';
+    var totalConverted = 0;
+
+    rows.forEach(function (row) {
+        var planQty = parseFloat(row.plan_qty) || 0;
+        var unitW = parseFloat(row.unit_weight) || 0;
+        var converted = parseFloat(row.converted_ton) || (planQty * unitW);
+        totalConverted += converted;
+
+        html += '<tr>';
+        html += '<td>' + (row.product || '') + '</td>';
+        html += '<td style="text-align:center;">' + (row.spec || '') + '</td>';
+        html += '<td>' + (planQty ? planQty.toLocaleString() : '') + '</td>';
+        html += '<td>' + (unitW ? unitW.toFixed(4) : '') + '</td>';
+        html += '<td>' + (converted ? converted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '') + '</td>';
+        html += '</tr>';
+    });
+
+    /* 합계 행 */
+    html += '<tr class="mp-row-total">';
+    html += '<td colspan="4">합계</td>';
+    html += '<td>' + totalConverted.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
 }
 
 /* ── 윈도우 리사이즈 시 카드 높이 재동기화 ── */
