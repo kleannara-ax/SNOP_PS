@@ -514,9 +514,6 @@ MILLROLL_INVENTORY_FILE = os.path.join(DATA_DIR, 'millroll_inventory.json')
 MILLROLL_DAILY_FILE = os.path.join(DATA_DIR, 'millroll_daily.json')
 MILLROLL_AGING_FILE = os.path.join(DATA_DIR, 'millroll_aging.json')
 
-# ─── 수작업 생산계획 데이터 파일 ───
-MANUAL_PLAN_FILE = os.path.join(DATA_DIR, 'manual_plan.json')
-
 
 def load_json_file(filepath, default=None):
     """JSON 파일 로드 — 없거나 파싱 실패 시 default 반환"""
@@ -1597,26 +1594,6 @@ def api_millroll_aging_save():
     data = body.get('data', {})
     save_json_file(MILLROLL_AGING_FILE, data)
     return jsonify({'success': True, 'message': '밀롤창고 월령분석 저장 완료'})
-
-
-# ─── 수작업 생산계획 API ───
-@app.route('/api/manual-plan/load', methods=['GET'])
-def api_manual_plan_load():
-    """수작업 생산 계획량 환산 데이터 로드"""
-    data = load_json_file(MANUAL_PLAN_FILE, {})
-    return jsonify({'success': True, 'data': data})
-
-
-@app.route('/api/manual-plan/save', methods=['POST'])
-def api_manual_plan_save():
-    """수작업 생산 계획량 환산 데이터 저장"""
-    body = request.get_json(silent=True)
-    if not body:
-        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
-
-    data = body.get('data', {})
-    save_json_file(MANUAL_PLAN_FILE, data)
-    return jsonify({'success': True, 'message': '수작업 생산계획 저장 완료'})
 
 
 if __name__ == '__main__':
