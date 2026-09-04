@@ -4054,28 +4054,16 @@ function initSlitterCalc() {
    ══════════════════════════════════════════════ */
 
 var slitterMonthlyYear = new Date().getFullYear();
-var slitterMonthlyRows = [];  // 연도 전체 rows (load-year API에서 수신)
+var slitterMonthlyRows = [];  // 월별 실적량 데이터 (별도 데이터 소스 연동 예정)
 
 /**
- * 서버에서 해당 연도 전체 슬리터 상세 데이터를 로드하여 월별 실적량 렌더링
+ * 슬리터 월별 실적량 데이터 로드 → 렌더링
+ * NOTE: 일자별 상세내역(slitter_detail)과는 별개 데이터.
+ *       별도 데이터 소스가 확정되면 여기서 해당 API를 호출하도록 수정 예정.
  */
 function loadSlitterMonthlyData() {
-    var year = slitterMonthlyYear;
-    fetch('/api/slitter-detail/load-year?year=' + encodeURIComponent(year))
-        .then(function (res) { return res.json(); })
-        .then(function (result) {
-            if (result.success && result.data) {
-                slitterMonthlyRows = result.data.rows || [];
-            } else {
-                slitterMonthlyRows = [];
-            }
-            renderSlitterMonthly();
-        })
-        .catch(function (err) {
-            console.error('[슬리터 월별 데이터 로드 오류]', err);
-            slitterMonthlyRows = [];
-            renderSlitterMonthly();
-        });
+    slitterMonthlyRows = [];
+    renderSlitterMonthly();
 }
 
 /**
@@ -4201,7 +4189,7 @@ function initSlitterMonthly() {
         });
     }
 
-    /* 연도 전체 데이터 로드 → 렌더링 */
+    /* 월별 실적량 렌더링 (별도 데이터 소스 연동 예정) */
     loadSlitterMonthlyData();
 }
 
