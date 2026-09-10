@@ -446,6 +446,9 @@ function init() {
     /* 슬리터 월별 실적량 초기화 */
     initSlitterMonthly();
 
+    /* 수재단 월별 실적량 초기화 */
+    initRecutMonthly();
+
     /* 슬리터 외주 진행 내역 초기화 */
     initOutsource();
 
@@ -460,6 +463,18 @@ function init() {
 
     /* 밀롤창고 월령분석 초기화 */
     initMillrollAging();
+
+    /* 카타 일자별 재단실적 초기화 */
+    initCutterDaily();
+
+    /* 카타 월별 재단실적 평균 초기화 */
+    initCutterMonthly();
+
+    /* 카타 일자별 단폭/두폭 재단실적 초기화 */
+    initCutterWidth();
+
+    /* 카타 월별 단폭/두폭 재단실적 초기화 */
+    initCutterWidthMonthly();
 
     /* 편집 가능 셀 이벤트 바인딩 (input/blur 리스너) */
     bindEditableCells();
@@ -2507,9 +2522,9 @@ function renderSubulbuTable(year, month) {
             /* 입고 행: 음수→0 보정값도 "0.0" 표시 (기말 데이터 있는 날) */
             if (rowDef.key === 'ipgo') {
                 var hasGimal = (calc.gimal[d] || 0) !== 0;
-                td.textContent = (val || hasGimal) ? val.toFixed(1) : '';
+                td.textContent = (val || hasGimal) ? Math.round(val) : '';
             } else {
-                td.textContent = val ? val.toFixed(1) : '';
+                td.textContent = val ? Math.round(val) : '';
             }
             tr.appendChild(td);
         }
@@ -3474,7 +3489,7 @@ function renderSlitterDetailTable() {
 
             /* ⑤ 중량(합계, ton) — kg→÷1000 */
             var tonVal = item.weight ? (item.weight / 1000) : 0;
-            html += '<td class="slitter-weight-cell">' + tonVal.toFixed(1) + '</td>';
+            html += '<td class="slitter-weight-cell">' + Math.round(tonVal) + '</td>';
 
             tr.innerHTML = html;
             tbody.appendChild(tr);
@@ -3487,7 +3502,7 @@ function renderSlitterDetailTable() {
             subTr.className = 'slitter-subtotal-row slitter-subtotal-' + groupClass;
             subTr.innerHTML =
                 '<td class="subtotal-label" colspan="4">' + groupLabel + ' 합계</td>' +
-                '<td class="subtotal-value">' + (groupSum / 1000).toFixed(1) + '</td>';
+                '<td class="subtotal-value">' + Math.round(groupSum / 1000) + '</td>';
             tbody.appendChild(subTr);
         }
 
@@ -3519,7 +3534,7 @@ function renderSlitterDetailTable() {
         tfoot.innerHTML =
             '<tr class="slitter-grandtotal-row">' +
                 '<td class="grandtotal-label" colspan="4">총 합계</td>' +
-                '<td class="grandtotal-value">' + (grandTotal / 1000).toFixed(1) + '</td>' +
+                '<td class="grandtotal-value">' + Math.round(grandTotal / 1000) + '</td>' +
             '</tr>';
     }
 
@@ -4054,14 +4069,16 @@ function initSlitterCalc() {
    ══════════════════════════════════════════════ */
 
 var slitterMonthlyYear = new Date().getFullYear();
-var slitterMonthlyRows = [];  // 연도 전체 rows (load-year API에서 수신)
+var slitterMonthlyRows = [];  // 월별 실적량 데이터 (별도 데이터 소스 연동 예정)
 
 /**
- * 서버에서 해당 연도 전체 슬리터 상세 데이터를 로드하여 월별 실적량 렌더링
+ * 슬리터 월별 실적량 데이터 로드 → 렌더링
+ * API: /api/slitter-monthly/load?year=YYYY
+ * DB 테이블: ps_slitter_monthly (DB 미연결 시 JSON 폴백)
  */
 function loadSlitterMonthlyData() {
     var year = slitterMonthlyYear;
-    fetch('/api/slitter-detail/load-year?year=' + encodeURIComponent(year))
+    fetch('/api/slitter-monthly/load?year=' + encodeURIComponent(year))
         .then(function (res) { return res.json(); })
         .then(function (result) {
             if (result.success && result.data) {
@@ -4072,7 +4089,7 @@ function loadSlitterMonthlyData() {
             renderSlitterMonthly();
         })
         .catch(function (err) {
-            console.error('[슬리터 월별 데이터 로드 오류]', err);
+            console.error('[슬리터 월별 실적량 로드 오류]', err);
             slitterMonthlyRows = [];
             renderSlitterMonthly();
         });
@@ -4104,19 +4121,18 @@ function renderSlitterMonthly() {
 
     var allRows = slitterMonthlyRows || [];
     allRows.forEach(function (row) {
-        /* 필드명: date(작업일자), domestic(내수구분), weight(실적량 KG) */
-        var dateVal = row.date || row.작업일자 || '';
-        if (!dateVal) return;
-        var parts = String(dateVal).split('-');
-        if (parts.length < 3) return;
+        /* DB 구조: { year_month: 'YYYY-MM', domestic: '내수'|'수출', weight: TON } */
+        var ym = row.year_month || '';
+        if (!ym) return;
+        var parts = ym.split('-');
+        if (parts.length < 2) return;
         var rowYear = parseInt(parts[0]);
         var rowMonth = parts[1];  // '01' ~ '12'
         if (rowYear !== year) return;
         if (!monthlyData[rowMonth]) return;
 
-        var kg = parseFloat(row.weight || row.실적량) || 0;
-        var ton = kg / 1000;
-        var category = (row.domestic || row.내수구분 || '').trim();
+        var ton = parseFloat(row.weight) || 0;
+        var category = (row.domestic || '').trim();
         if (category === '수출') {
             monthlyData[rowMonth].export += ton;
         } else {
@@ -4136,7 +4152,7 @@ function renderSlitterMonthly() {
         { key: 'export',   label: '수출' },
     ];
     var html = '';
-    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : ''; };
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
 
     rows.forEach(function (row) {
         html += '<tr>';
@@ -4145,11 +4161,11 @@ function renderSlitterMonthly() {
         months.forEach(function (m) {
             var mm = String(m).padStart(2, '0');
             var val = monthlyData[mm] ? monthlyData[mm][row.key] : 0;
-            val = Math.round(val * 10) / 10;
+            val = Math.round(val);
             total += val;
             html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
         });
-        var avg = months.length > 0 ? Math.round((total / months.length) * 10) / 10 : 0;
+        var avg = months.length > 0 ? Math.round(total / months.length) : 0;
         html += '<td class="pkg-col-summary">' + fmt(total) + '</td>';
         html += '<td class="pkg-col-summary">' + fmt(avg) + '</td>';
         html += '</tr>';
@@ -4163,11 +4179,11 @@ function renderSlitterMonthly() {
         var mm = String(m).padStart(2, '0');
         var d = monthlyData[mm] ? monthlyData[mm].domestic : 0;
         var e = monthlyData[mm] ? monthlyData[mm].export : 0;
-        var colSum = Math.round((d + e) * 10) / 10;
+        var colSum = Math.round(d + e);
         grandTotal += colSum;
         html += '<td>' + fmt(colSum) + '</td>';
     });
-    var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
+    var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
     html += '<td class="pkg-col-summary">' + fmt(grandTotal) + '</td>';
     html += '<td class="pkg-col-summary">' + fmt(grandAvg) + '</td>';
     html += '</tr>';
@@ -4201,8 +4217,165 @@ function initSlitterMonthly() {
         });
     }
 
-    /* 연도 전체 데이터 로드 → 렌더링 */
+    /* 월별 실적량 렌더링 (별도 데이터 소스 연동 예정) */
     loadSlitterMonthlyData();
+}
+
+/* ══════════════════════════════════════════════
+   수재단 월별 실적량
+   ══════════════════════════════════════════════ */
+
+var recutMonthlyYear = new Date().getFullYear();
+var recutMonthlyRows = [];  // 수재단 월별 실적량 데이터 (별도 데이터 소스 연동 예정)
+
+/**
+ * 수재단 월별 실적량 데이터 로드 → 렌더링
+ * API: /api/recut-monthly/load?year=YYYY
+ * DB 테이블: ps_recut_monthly (DB 미연결 시 JSON 폴백)
+ */
+function loadRecutMonthlyData() {
+    var year = recutMonthlyYear;
+    fetch('/api/recut-monthly/load?year=' + encodeURIComponent(year))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                recutMonthlyRows = result.data.rows || [];
+            } else {
+                recutMonthlyRows = [];
+            }
+            renderRecutMonthly();
+        })
+        .catch(function (err) {
+            console.error('[수재단 월별 실적량 로드 오류]', err);
+            recutMonthlyRows = [];
+            renderRecutMonthly();
+        });
+}
+
+/**
+ * 수재단 월별 실적량 테이블 렌더링
+ * recutMonthlyRows를 월별·내수구분별로 집계
+ * 행: 내수, 수출, 총합계(자동 합산)
+ */
+function renderRecutMonthly() {
+    var thead = document.getElementById('recut-monthly-thead');
+    var tbody = document.getElementById('recut-monthly-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = recutMonthlyYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
+
+    /* ── 월별 집계: recutMonthlyRows에서 추출 ── */
+    var monthlyData = {};
+    months.forEach(function (m) {
+        monthlyData[String(m).padStart(2, '0')] = { domestic: 0, export: 0 };
+    });
+
+    var allRows = recutMonthlyRows || [];
+    allRows.forEach(function (row) {
+        /* DB 구조: { year_month: 'YYYY-MM', domestic: '내수'|'수출', weight: TON } */
+        var ym = row.year_month || '';
+        if (!ym) return;
+        var parts = ym.split('-');
+        if (parts.length < 2) return;
+        var rowYear = parseInt(parts[0]);
+        var rowMonth = parts[1];
+        if (rowYear !== year) return;
+        if (!monthlyData[rowMonth]) return;
+
+        var ton = parseFloat(row.weight) || 0;
+        var category = (row.domestic || '').trim();
+        if (category === '수출') {
+            monthlyData[rowMonth].export += ton;
+        } else {
+            monthlyData[rowMonth].domestic += ton;
+        }
+    });
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '<th>총계</th><th>평균</th></tr>';
+    thead.innerHTML = thRow;
+
+    /* ── tbody ── */
+    var rows = [
+        { key: 'domestic', label: '내수' },
+        { key: 'export',   label: '수출' },
+    ];
+    var html = '';
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
+
+    rows.forEach(function (row) {
+        html += '<tr>';
+        html += '<td>' + row.label + '</td>';
+        var total = 0;
+        months.forEach(function (m) {
+            var mm = String(m).padStart(2, '0');
+            var val = monthlyData[mm] ? monthlyData[mm][row.key] : 0;
+            val = Math.round(val);
+            total += val;
+            html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
+        });
+        var avg = months.length > 0 ? Math.round(total / months.length) : 0;
+        html += '<td class="pkg-col-summary">' + fmt(total) + '</td>';
+        html += '<td class="pkg-col-summary">' + fmt(avg) + '</td>';
+        html += '</tr>';
+    });
+
+    /* 총합계 행 */
+    html += '<tr class="pkg-row-total">';
+    html += '<td>총합계</td>';
+    var grandTotal = 0;
+    months.forEach(function (m) {
+        var mm = String(m).padStart(2, '0');
+        var d = monthlyData[mm] ? monthlyData[mm].domestic : 0;
+        var e = monthlyData[mm] ? monthlyData[mm].export : 0;
+        var colSum = Math.round(d + e);
+        grandTotal += colSum;
+        html += '<td>' + fmt(colSum) + '</td>';
+    });
+    var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
+    html += '<td class="pkg-col-summary">' + fmt(grandTotal) + '</td>';
+    html += '<td class="pkg-col-summary">' + fmt(grandAvg) + '</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 수재단 월별 실적량 초기화
+ */
+function initRecutMonthly() {
+    var now = new Date();
+    var monthDay = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 기준';
+
+    var dateLabel = document.getElementById('recut-monthly-date-label');
+    if (dateLabel) dateLabel.textContent = monthDay;
+
+    var yearSelect = document.getElementById('recut-monthly-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === recutMonthlyYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            recutMonthlyYear = parseInt(this.value);
+            loadRecutMonthlyData();
+        });
+    }
+
+    /* 월별 실적량 렌더링 (별도 데이터 소스 연동 예정) */
+    loadRecutMonthlyData();
 }
 
 /* ══════════════════════════════════════════════
@@ -5128,7 +5301,7 @@ function renderMillrollSummary() {
         grandTotal += colSum;
         html += '<td>' + (colSum ? Number(colSum.toFixed(1)).toLocaleString() : '') + '</td>';
     });
-    var grandAvg = months.length > 0 ? Math.round((grandTotal / months.length) * 10) / 10 : 0;
+    var grandAvg = months.length > 0 ? Math.round(grandTotal / months.length) : 0;
     html += '<td class="pkg-col-summary">' + (grandTotal ? Number(grandTotal.toFixed(1)).toLocaleString() : '') + '</td>';
     html += '<td class="pkg-col-summary">' + (grandAvg ? Number(grandAvg.toFixed(1)).toLocaleString() : '') + '</td>';
     html += '</tr>';
@@ -5383,7 +5556,7 @@ function renderMrInventoryDetail() {
 
                 html += '<td>' + (item.spec || '') + '</td>';
                 html += '<td>' + (item.roll_count || 0) + '</td>';
-                html += '<td class="mr-detail-wt">' + (Number(item.weight_ton) || 0).toFixed(1) + '</td>';
+                html += '<td class="mr-detail-wt">' + Math.round(Number(item.weight_ton) || 0) + '</td>';
                 html += '</tr>';
             });
             codeFirstRow = false;
@@ -5708,7 +5881,7 @@ function updateMillrollAgingCalc() {
     });
 
     var dataCols = ['under90', 'r90_150', 'r151_180', 'over180'];
-    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : '-'; };
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : '-'; };
     var parseVal = function (td) {
         var t = (td && td.textContent) || '';
         if (t === '-' || t === '') return 0;
@@ -5735,19 +5908,117 @@ function updateMillrollAgingCalc() {
 }
 
 /**
- * 밀롤창고 월령분석 — 서버 데이터 로드 후 셀에 채우기
+ * 밀롤창고 월령분석 — 원본(I/F) 데이터 로드 → 경과일 계산 → 자동 집계
+ * 1) /api/millroll-aging-raw/load 에서 원본 데이터 로드
+ * 2) 기준일자(ref_date) 기준 경과일 = ref_date - warehouse_date
+ * 3) 구간별 집계 → 월령분석 테이블 채우기
+ * 4) 180일 초과 항목 → 180일 초과 리스트 테이블 채우기
+ * 5) 원본 데이터 없으면 기존 수동 데이터(/api/millroll-aging/load) 폴백
  */
 function loadMillrollAging() {
+    fetch('/api/millroll-aging-raw/load')
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data && result.data.rows && result.data.rows.length > 0) {
+                /* 원본(I/F) 데이터가 있으면 자동 집계 */
+                processAgingRawData(result.data);
+            } else {
+                /* 원본 없으면 기존 수동 데이터 폴백 */
+                loadMillrollAgingFallback();
+            }
+        })
+        .catch(function (err) {
+            console.error('[밀롤 월령분석 원본 로드 오류]', err);
+            loadMillrollAgingFallback();
+        });
+}
+
+/**
+ * 기존 수동 월령분석 데이터 폴백 로드
+ */
+function loadMillrollAgingFallback() {
     fetch('/api/millroll-aging/load')
         .then(function (res) { return res.json(); })
         .then(function (result) {
             if (result.success && result.data) {
                 fillMillrollAgingCells(result.data);
+                renderOver180List(null);  /* 원본 없으면 빈 리스트 */
             }
         })
         .catch(function (err) {
-            console.error('[밀롤 월령분석 로드 오류]', err);
+            console.error('[밀롤 월령분석 폴백 로드 오류]', err);
         });
+}
+
+/**
+ * 원본(I/F) 데이터에서 경과일 기반 자동 집계
+ * @param {{ ref_date: string, rows: Array }} rawData
+ */
+function processAgingRawData(rawData) {
+    var refDate = new Date(rawData.ref_date + 'T00:00:00');
+    var rows = rawData.rows || [];
+
+    /* ── 월령분석 구간별 집계 ── */
+    var aging = {
+        domestic: { under90: 0, r90_150: 0, r151_180: 0, over180: 0 },
+        'export': { under90: 0, r90_150: 0, r151_180: 0, over180: 0 },
+    };
+
+    /* ── 180일 초과 항목 그룹핑 ── */
+    var over180Map = {};
+
+    rows.forEach(function (r) {
+        var whDateStr = r.warehouse_date || '';
+        if (!whDateStr) return;
+        var whDate = new Date(String(whDateStr).substring(0, 10) + 'T00:00:00');
+        if (isNaN(whDate.getTime())) return;
+
+        var diffDays = Math.floor((refDate - whDate) / (1000 * 60 * 60 * 24));
+        var weightTon = (Number(r.weight_kg) || 0) / 1000;
+        var domKey = (r.domestic === '수출') ? 'export' : 'domestic';
+
+        /* 구간별 집계 */
+        if (diffDays < 90) {
+            aging[domKey].under90 += weightTon;
+        } else if (diffDays <= 150) {
+            aging[domKey].r90_150 += weightTon;
+        } else if (diffDays <= 180) {
+            aging[domKey].r151_180 += weightTon;
+        } else {
+            aging[domKey].over180 += weightTon;
+
+            /* 180일 초과 → 그룹핑 (지종코드 + 평량 + 지폭) */
+            var key = (r.paper_code || '') + '|' + (r.basis_weight || 0) + '|' + (r.width || 0);
+            if (!over180Map[key]) {
+                over180Map[key] = {
+                    paper_code: r.paper_code || '',
+                    basis_weight: Number(r.basis_weight) || 0,
+                    width: Number(r.width) || 0,
+                    meter: Number(r.meter) || 0,  /* 개별 권치수 대표값 (합산 아님) */
+                    count: 0,
+                    weight: 0,
+                };
+            }
+            over180Map[key].count += 1;
+            over180Map[key].weight += weightTon;
+        }
+    });
+
+    /* 정수 반올림 */
+    ['domestic', 'export'].forEach(function (dk) {
+        ['under90', 'r90_150', 'r151_180', 'over180'].forEach(function (ck) {
+            aging[dk][ck] = Math.round(aging[dk][ck]);
+        });
+    });
+
+    /* 월령분석 테이블 채우기 */
+    fillMillrollAgingCells(aging);
+
+    /* 180일 초과 리스트 — 중량 내림차순 정렬 */
+    var over180List = Object.values(over180Map).sort(function (a, b) {
+        return b.weight - a.weight;
+    });
+    renderOver180List({ rows: over180List });
 }
 
 /**
@@ -5758,7 +6029,7 @@ function fillMillrollAgingCells(data) {
     if (!tbody) return;
 
     var dataCols = ['under90', 'r90_150', 'r151_180', 'over180'];
-    var fmt = function (v) { return Number((v || 0).toFixed(1)).toLocaleString(); };
+    var fmt = function (v) { return Math.round(v || 0).toLocaleString(); };
 
     ['domestic', 'export'].forEach(function (rowKey) {
         var rowData = data[rowKey] || {};
@@ -5771,93 +6042,1184 @@ function fillMillrollAgingCells(data) {
     });
 
     updateMillrollAgingCalc();
-    renderMillrollAgingChart(data);
 }
 
 /**
- * 월령분석 막대 그래프 렌더링 — 내수/수출 그룹 바 차트
+ * 180일 초과 리스트 렌더링
+ * 다단계 그룹핑: 지종코드 → 평량 → 지폭 → 미터수 (각 레벨 rowspan)
+ * 컬럼: 지종코드, 평량, 지폭, 미터수, 개수, 중량(ton)
  */
-var mrAgingChart = null;
-function renderMillrollAgingChart(data) {
-    var ctx = document.getElementById('mr-aging-chart');
-    if (!ctx) return;
+function renderOver180List(data) {
+    var tbody = document.getElementById('mr-over180-tbody');
+    if (!tbody) return;
 
-    if (mrAgingChart) { mrAgingChart.destroy(); mrAgingChart = null; }
+    var rows = (data && data.rows) || [];
 
-    var labels = ['90일 미만', '90~150일', '151~180일', '180일 초과'];
-    var cols = ['under90', 'r90_150', 'r151_180', 'over180'];
-    var dom = data.domestic || {};
-    var exp = data['export'] || {};
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px 0;">데이터 없음</td></tr>';
+        return;
+    }
 
-    var domData = cols.map(function (c) { return dom[c] || 0; });
-    var expData = cols.map(function (c) { return exp[c] || 0; });
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : '-'; };
+    var fmtInt = function (v) { return v ? Math.round(v).toLocaleString() : '-'; };
 
-    mrAgingChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '내수',
-                    data: domData,
-                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
-                    borderColor: 'rgba(37, 99, 235, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4
-                },
-                {
-                    label: '수출',
-                    data: expData,
-                    backgroundColor: 'rgba(249, 115, 22, 0.7)',
-                    borderColor: 'rgba(249, 115, 22, 1)',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: { font: { size: 12 }, usePointStyle: true, pointStyle: 'rectRounded' }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (ctx) {
-                            return ctx.dataset.label + ': ' + Number(ctx.parsed.y.toFixed(1)).toLocaleString() + ' ton';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function (v) { return v.toLocaleString(); }
-                    },
-                    title: {
-                        display: true,
-                        text: 'ton',
-                        font: { size: 11 },
-                        color: '#94a3b8'
-                    }
-                }
-            }
-        }
+    /* ── 플랫 행 목록 생성 (정렬: 지종코드 → 평량 → 지폭 → 미터수) ── */
+    var sorted = rows.slice().sort(function (a, b) {
+        var c = (a.paper_code || '').localeCompare(b.paper_code || '');
+        if (c !== 0) return c;
+        c = (Number(a.basis_weight) || 0) - (Number(b.basis_weight) || 0);
+        if (c !== 0) return c;
+        c = (Number(a.width) || 0) - (Number(b.width) || 0);
+        if (c !== 0) return c;
+        return (Number(a.meter) || 0) - (Number(b.meter) || 0);
     });
+
+    /* ── 각 셀의 rowspan 계산 ── */
+    var len = sorted.length;
+
+    /* 지종코드 rowspan: 연속으로 같은 paper_code인 행 수 */
+    var codeSpan = [];
+    for (var i = 0; i < len; i++) {
+        if (i === 0 || sorted[i].paper_code !== sorted[i - 1].paper_code) {
+            var cnt = 1;
+            for (var j = i + 1; j < len && sorted[j].paper_code === sorted[i].paper_code; j++) cnt++;
+            codeSpan[i] = cnt;
+        } else {
+            codeSpan[i] = 0;
+        }
+    }
+
+    /* 평량 rowspan: 같은 지종코드 내에서 연속으로 같은 basis_weight인 행 수 */
+    var bwSpan = [];
+    for (var i = 0; i < len; i++) {
+        if (i === 0 || sorted[i].paper_code !== sorted[i - 1].paper_code || sorted[i].basis_weight !== sorted[i - 1].basis_weight) {
+            var cnt = 1;
+            for (var j = i + 1; j < len && sorted[j].paper_code === sorted[i].paper_code && sorted[j].basis_weight === sorted[i].basis_weight; j++) cnt++;
+            bwSpan[i] = cnt;
+        } else {
+            bwSpan[i] = 0;
+        }
+    }
+
+    /* 지폭 rowspan: 같은 지종+평량 내에서 연속으로 같은 width인 행 수 */
+    var wSpan = [];
+    for (var i = 0; i < len; i++) {
+        if (i === 0 || sorted[i].paper_code !== sorted[i - 1].paper_code || sorted[i].basis_weight !== sorted[i - 1].basis_weight || sorted[i].width !== sorted[i - 1].width) {
+            var cnt = 1;
+            for (var j = i + 1; j < len && sorted[j].paper_code === sorted[i].paper_code && sorted[j].basis_weight === sorted[i].basis_weight && sorted[j].width === sorted[i].width; j++) cnt++;
+            wSpan[i] = cnt;
+        } else {
+            wSpan[i] = 0;
+        }
+    }
+
+    /* ── HTML 생성 ── */
+    var html = '';
+    var grandCount = 0, grandWeight = 0;
+
+    for (var i = 0; i < len; i++) {
+        var item = sorted[i];
+        grandCount += (Number(item.count) || 0);
+        grandWeight += (Number(item.weight) || 0);
+
+        html += '<tr' + (codeSpan[i] > 0 && i > 0 ? ' class="over180-group-first"' : '') + '>';
+        if (codeSpan[i] > 0) {
+            html += '<td class="over180-group-code" rowspan="' + codeSpan[i] + '">' + (item.paper_code || '') + '</td>';
+        }
+        if (bwSpan[i] > 0) {
+            html += '<td class="over180-group-cell" rowspan="' + bwSpan[i] + '">' + fmtInt(item.basis_weight) + '</td>';
+        }
+        if (wSpan[i] > 0) {
+            html += '<td class="over180-group-cell" rowspan="' + wSpan[i] + '">' + fmtInt(item.width) + '</td>';
+        }
+        html += '<td class="pkg-data-cell">' + fmtInt(Math.round(item.meter)) + '</td>';
+        html += '<td class="pkg-data-cell">' + fmtInt(item.count) + '</td>';
+        html += '<td class="pkg-data-cell">' + fmt(item.weight) + '</td>';
+        html += '</tr>';
+    }
+
+    /* 합계 행 */
+    html += '<tr class="pkg-row-total">';
+    html += '<td colspan="4">합계</td>';
+    html += '<td>' + fmtInt(grandCount) + '</td>';
+    html += '<td>' + fmt(grandWeight) + '</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
 }
 
 /**
  * 밀롤창고 월령분석 초기화
  */
 function initMillrollAging() {
+    /* 전일 기준 날짜 라벨 */
+    var now = new Date();
+    var yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    var yMonth = yesterday.getMonth() + 1;
+    var yDay = yesterday.getDate();
+    var dateLabel = document.getElementById('mr-aging-date-label');
+    if (dateLabel) {
+        dateLabel.textContent = yMonth + '월 ' + yDay + '일 기준 데이터 입니다.';
+    }
+    var over180Label = document.getElementById('mr-over180-date-label');
+    if (over180Label) {
+        over180Label.textContent = yMonth + '월 ' + yDay + '일 기준, 180일 초과 대상 건 리스트 입니다.';
+    }
+
     renderMillrollAging();
     loadMillrollAging();
+    initAgingMonthly();
+}
+
+/* ══════════════════════════════════════════════
+   밀롤창고 월령분석 월말기준
+   ══════════════════════════════════════════════
+   각 월의 마지막날 데이터를 월별로 표시
+   예: 1월 데이터 = 2/1 오전7시 I/F → 기준일 1/31
+   행: 90일미만, 90~150, 151~180, 180초과, 합계
+   열: 1월 ~ 현재월 (동적)
+   ══════════════════════════════════════════════ */
+
+var agingMonthlyYear = new Date().getFullYear();
+
+/**
+ * 월령분석 월말기준 데이터 로드 → 렌더링
+ * API: /api/millroll-aging-monthly/load?year=YYYY
+ */
+function loadAgingMonthlyData() {
+    var year = agingMonthlyYear;
+    fetch('/api/millroll-aging-monthly/load?year=' + encodeURIComponent(year))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                renderAgingMonthlyTable(result.data);
+            } else {
+                renderAgingMonthlyTable({});
+            }
+        })
+        .catch(function (err) {
+            console.error('[월령분석 월말기준 로드 오류]', err);
+            renderAgingMonthlyTable({});
+        });
+}
+
+/**
+ * 월령분석 월말기준 테이블 렌더링
+ * @param {Object} data — { '01': { under90: n, r90_150: n, r151_180: n, over180: n }, ... }
+ */
+function renderAgingMonthlyTable(data) {
+    var thead = document.getElementById('mr-aging-monthly-thead');
+    var tbody = document.getElementById('mr-aging-monthly-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = agingMonthlyYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '</tr>';
+    thead.innerHTML = thRow;
+
+    /* ── 행 정의 ── */
+    var rowDefs = [
+        { key: 'under90',   label: '90일 미만' },
+        { key: 'r90_150',   label: '90~150일' },
+        { key: 'r151_180',  label: '151~180일' },
+        { key: 'over180',   label: '180일 초과' },
+        { key: 'total',     label: '합계' },
+    ];
+
+    var fmt = function (v) { return v ? Number(v.toFixed(1)).toLocaleString() : '-'; };
+
+    var html = '';
+    rowDefs.forEach(function (rowDef) {
+        var isTotal = (rowDef.key === 'total');
+        html += '<tr class="' + (isTotal ? 'pkg-row-total' : '') + '">';
+        html += '<td>' + rowDef.label + '</td>';
+
+        months.forEach(function (m) {
+            var mm = String(m).padStart(2, '0');
+            var monthData = data[mm] || {};
+
+            var val;
+            if (isTotal) {
+                val = (Number(monthData.under90) || 0) +
+                      (Number(monthData.r90_150) || 0) +
+                      (Number(monthData.r151_180) || 0) +
+                      (Number(monthData.over180) || 0);
+            } else {
+                val = Number(monthData[rowDef.key]) || 0;
+            }
+            html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
+        });
+
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 월령분석 월말기준 초기화
+ */
+function initAgingMonthly() {
+    var now = new Date();
+    var yearSelect = document.getElementById('mr-aging-monthly-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === agingMonthlyYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            agingMonthlyYear = parseInt(this.value);
+            loadAgingMonthlyData();
+        });
+    }
+    loadAgingMonthlyData();
+}
+
+/* ══════════════════════════════════════════════
+   카타 — 일자별 재단실적
+   ══════════════════════════════════════════════ */
+
+/** 카타 상태 */
+var cutterState = {
+    yearMonth: '',
+};
+
+/** 요일 한글 배열 (일~토) */
+var CUTTER_DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** 재단기 목록 */
+var CUTTER_MACHINES = [
+    '3호기 재단기 #2',
+    '3호기 재단기 #3',
+    '3호기 재단기 #4',
+    '3호기 재단기 #5',
+    '3호기 재단기 #6',
+    '3호기 재단기 #7',
+    '3호기 재단기 #8',
+    '3호기 재단기 #9',
+];
+
+/** 하단 요약 행 */
+var CUTTER_SUMMARY_ROWS = [
+    { key: 'total',     label: '총합계(실적)' },
+    { key: 'active',    label: '가동대수' },
+    { key: 'target',    label: '목표량' },
+    { key: 'diff',      label: '차이' },
+];
+
+/**
+ * 일자별 재단실적 테이블 렌더링
+ */
+function renderCutterDailyTable() {
+    var headerRow = document.getElementById('cutter-header-row');
+    var tbody = document.getElementById('cutter-daily-tbody');
+    if (!headerRow || !tbody) return;
+
+    var ym = cutterState.yearMonth;
+    if (!ym) return;
+    var parts = ym.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* ── 헤더: 월 라벨 + 일자 ── */
+    headerRow.innerHTML = '';
+    var thLabel = document.createElement('th');
+    thLabel.className = 'subulbu-th-label';
+    thLabel.textContent = month + '월';
+    headerRow.appendChild(thLabel);
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateObj = new Date(year, month - 1, d);
+        var dayIdx = dateObj.getDay();
+        var dayName = CUTTER_DAY_NAMES[dayIdx];
+        var weekendClass = '';
+        if (dayIdx === 0) weekendClass = ' subulbu-sun';
+        else if (dayIdx === 6) weekendClass = ' subulbu-sat';
+
+        var th = document.createElement('th');
+        th.className = 'subulbu-date-th' + weekendClass;
+        th.innerHTML = d + '일<span class="subulbu-date-day">(' + dayName + ')</span>';
+        headerRow.appendChild(th);
+    }
+
+    /* 맨 오른쪽: 평균 헤더 */
+    var thAvg = document.createElement('th');
+    thAvg.className = 'subulbu-date-th';
+    thAvg.style.background = '#eef2ff';
+    thAvg.textContent = '평균';
+    headerRow.appendChild(thAvg);
+
+    /* ── tbody: 재단기 행 + 요약 행 ── */
+    var html = '';
+
+    /* 재단기 8개 행 */
+    CUTTER_MACHINES.forEach(function (name, idx) {
+        html += '<tr class="subulbu-row">';
+        html += '<td class="subulbu-label">' + name + '</td>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            html += '<td class="subulbu-data" data-cutter-machine="' + idx + '" data-cutter-day="' + d + '"></td>';
+        }
+        html += '<td class="subulbu-data" data-cutter-avg="machine-' + idx + '" style="background:#f8fafc;font-weight:600;"></td>';
+        html += '</tr>';
+    });
+
+    /* 요약 행 */
+    CUTTER_SUMMARY_ROWS.forEach(function (row) {
+        var cls = 'subulbu-row';
+        if (row.key === 'total') cls += ' subulbu-row-gye';
+        html += '<tr class="' + cls + '">';
+        html += '<td class="subulbu-label">' + row.label + '</td>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            if (row.key === 'target') {
+                /* 목표량: 입력 가능 */
+                html += '<td class="subulbu-data pkg-input-cell" data-cutter-summary="target" data-cutter-day="' + d + '">';
+                html += '<input type="text" class="cutter-target-input" data-day="' + d + '" '
+                      + 'inputmode="decimal" autocomplete="off" '
+                      + 'style="width:100%;height:100%;padding:6px 2px;text-align:center;font-size:0.8rem;border:none;outline:none;background:transparent;">';
+                html += '</td>';
+            } else {
+                html += '<td class="subulbu-data" data-cutter-summary="' + row.key + '" data-cutter-day="' + d + '"></td>';
+            }
+        }
+        html += '<td class="subulbu-data" data-cutter-avg="summary-' + row.key + '" style="background:#f8fafc;font-weight:600;"></td>';
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+
+    /* 목표량 입력 이벤트 바인딩 */
+    bindCutterTargetInputs(daysInMonth);
+
+    /* 서버에서 일자별 재단실적 데이터 로드 → 채우기 → 목표량 로드 → 계산 */
+    loadCutterDailyData(daysInMonth);
+}
+
+/**
+ * 카타 총합계 자동 계산 — 재단기 #2~#9 합산
+ * @param {number} daysInMonth — 해당 월 일수
+ */
+function calcCutterTotals(daysInMonth) {
+    var tbody = document.getElementById('cutter-daily-tbody');
+    if (!tbody) return;
+
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var sum = 0;
+        var hasData = false;
+        var activeCount = 0;
+
+        /* 재단기 8개(idx 0~7) 데이터 합산 + 가동대수 카운트 */
+        for (var m = 0; m < CUTTER_MACHINES.length; m++) {
+            var cell = tbody.querySelector('td[data-cutter-machine="' + m + '"][data-cutter-day="' + d + '"]');
+            if (cell && cell.textContent.trim()) {
+                var val = parseFloat(cell.textContent.replace(/,/g, '')) || 0;
+                sum += val;
+                hasData = true;
+                activeCount++;
+            }
+        }
+
+        /* 총합계 셀에 반영 */
+        var totalCell = tbody.querySelector('td[data-cutter-summary="total"][data-cutter-day="' + d + '"]');
+        if (totalCell) {
+            totalCell.textContent = hasData ? fmt(sum) : '';
+        }
+
+        /* 가동대수 셀에 반영 */
+        var activeCell = tbody.querySelector('td[data-cutter-summary="active"][data-cutter-day="' + d + '"]');
+        if (activeCell) {
+            activeCell.textContent = activeCount > 0 ? activeCount : '';
+        }
+    }
+
+    /* ── 평균 계산 (각 행의 데이터가 있는 일수로 나눔) ── */
+
+    /* 재단기별 평균 */
+    for (var m = 0; m < CUTTER_MACHINES.length; m++) {
+        var rowSum = 0, rowCount = 0;
+        for (var d = 1; d <= daysInMonth; d++) {
+            var cell = tbody.querySelector('td[data-cutter-machine="' + m + '"][data-cutter-day="' + d + '"]');
+            if (cell && cell.textContent.trim()) {
+                rowSum += parseFloat(cell.textContent.replace(/,/g, '')) || 0;
+                rowCount++;
+            }
+        }
+        var avgCell = tbody.querySelector('td[data-cutter-avg="machine-' + m + '"]');
+        if (avgCell) {
+            avgCell.textContent = rowCount > 0 ? fmt(rowSum / rowCount) : '';
+        }
+    }
+
+    /* 요약 행 평균 (diff 제외 — 별도 계산) */
+    var summaryAvg = {};
+    CUTTER_SUMMARY_ROWS.forEach(function (row) {
+        if (row.key === 'diff') return;  /* diff는 아래에서 별도 처리 */
+        var rowSum = 0, rowCount = 0;
+        for (var d = 1; d <= daysInMonth; d++) {
+            var val = 0, hasVal = false;
+            if (row.key === 'target') {
+                var inp = tbody.querySelector('.cutter-target-input[data-day="' + d + '"]');
+                if (inp && inp.value.trim()) {
+                    val = parseFloat(inp.value.replace(/,/g, '')) || 0;
+                    hasVal = true;
+                }
+            } else {
+                var cell = tbody.querySelector('td[data-cutter-summary="' + row.key + '"][data-cutter-day="' + d + '"]');
+                if (cell && cell.textContent.trim()) {
+                    val = parseFloat(cell.textContent.replace(/,/g, '')) || 0;
+                    hasVal = true;
+                }
+            }
+            if (hasVal) { rowSum += val; rowCount++; }
+        }
+        var avg = rowCount > 0 ? rowSum / rowCount : 0;
+        summaryAvg[row.key] = avg;
+        var avgCell = tbody.querySelector('td[data-cutter-avg="summary-' + row.key + '"]');
+        if (avgCell) {
+            avgCell.textContent = rowCount > 0 ? fmt(avg) : '';
+        }
+    });
+
+    /* diff 평균 = 총합계 평균 - 목표량 평균 */
+    var diffAvgCell = tbody.querySelector('td[data-cutter-avg="summary-diff"]');
+    if (diffAvgCell) {
+        var totalAvg = summaryAvg['total'] || 0;
+        var targetAvg = summaryAvg['target'] || 0;
+        if (totalAvg || targetAvg) {
+            var diffAvg = totalAvg - targetAvg;
+            diffAvgCell.textContent = fmt(diffAvg);
+            diffAvgCell.style.color = diffAvg < 0 ? '#dc2626' : '';
+        } else {
+            diffAvgCell.textContent = '';
+            diffAvgCell.style.color = '';
+        }
+    }
+}
+
+/**
+ * 목표량 입력 이벤트 바인딩
+ * - 값 입력 후 blur/Enter → 해당 일자 이후~말일까지 동일 값 채움
+ * - 차이(실적 - 목표량) 자동 계산
+ * @param {number} daysInMonth
+ */
+function bindCutterTargetInputs(daysInMonth) {
+    var tbody = document.getElementById('cutter-daily-tbody');
+    if (!tbody) return;
+
+    var inputs = tbody.querySelectorAll('.cutter-target-input');
+    inputs.forEach(function (inp) {
+        function handleInput() {
+            var day = parseInt(inp.dataset.day, 10);
+            var val = inp.value.trim();
+            if (!val) return;
+
+            /* 해당 일자 이후~말일까지 같은 값 채움 */
+            for (var d = day + 1; d <= daysInMonth; d++) {
+                var nextInp = tbody.querySelector('.cutter-target-input[data-day="' + d + '"]');
+                if (nextInp) {
+                    nextInp.value = val;
+                }
+            }
+
+            /* 차이 재계산 + 평균 재계산 */
+            calcCutterDiff(daysInMonth);
+            calcCutterTotals(daysInMonth);
+
+            /* 서버에 자동 저장 */
+            saveCutterTargets(daysInMonth);
+        }
+
+        inp.addEventListener('blur', handleInput);
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                inp.blur();
+            }
+        });
+    });
+}
+
+/**
+ * 차이 = 실적 - 목표량 (일자별 자동 계산)
+ * @param {number} daysInMonth
+ */
+function calcCutterDiff(daysInMonth) {
+    var tbody = document.getElementById('cutter-daily-tbody');
+    if (!tbody) return;
+
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        /* 총합계 값 읽기 (= 실적) */
+        var totalCell = tbody.querySelector('td[data-cutter-summary="total"][data-cutter-day="' + d + '"]');
+        var actualVal = 0;
+        var hasActual = false;
+        if (totalCell && totalCell.textContent.trim()) {
+            actualVal = parseFloat(totalCell.textContent.replace(/,/g, '')) || 0;
+            hasActual = true;
+        }
+
+        /* 목표량 값 읽기 */
+        var targetInp = tbody.querySelector('.cutter-target-input[data-day="' + d + '"]');
+        var targetVal = 0;
+        var hasTarget = false;
+        if (targetInp && targetInp.value.trim()) {
+            targetVal = parseFloat(targetInp.value.replace(/,/g, '')) || 0;
+            hasTarget = true;
+        }
+
+        /* 차이 셀에 반영 — 실적이 있을 때만 계산 (실적 - 목표량) */
+        var diffCell = tbody.querySelector('td[data-cutter-summary="diff"][data-cutter-day="' + d + '"]');
+        if (diffCell) {
+            if (hasActual && hasTarget) {
+                var diff = actualVal - targetVal;
+                diffCell.textContent = fmt(diff);
+                diffCell.style.color = diff < 0 ? '#dc2626' : '';
+            } else {
+                diffCell.textContent = '';
+                diffCell.style.color = '';
+            }
+        }
+    }
+}
+
+/**
+ * 카타 일자별 재단실적 데이터 로드 → 재단기/단폭두폭 테이블 채우기
+ * @param {number} daysInMonth
+ */
+function loadCutterDailyData(daysInMonth) {
+    var ym = cutterState.yearMonth;
+    if (!ym) { loadCutterTargets(daysInMonth); return; }
+
+    fetch('/api/cutter-daily/load?year_month=' + encodeURIComponent(ym))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                fillCutterDailyData(result.data, daysInMonth);
+            }
+            /* 목표량 로드 → 계산 */
+            loadCutterTargets(daysInMonth);
+        })
+        .catch(function (err) {
+            console.error('[카타 일자별 데이터 로드 오류]', err);
+            loadCutterTargets(daysInMonth);
+        });
+}
+
+/**
+ * 일자별 재단실적 + 단폭/두폭 테이블에 데이터 채우기
+ * @param {Object} data — { '1': { machines: {...}, width: {...} }, '8': {...}, ... }
+ * @param {number} daysInMonth
+ */
+function fillCutterDailyData(data, daysInMonth) {
+    var tbody = document.getElementById('cutter-daily-tbody');
+    var widthTbody = document.getElementById('cutter-width-tbody');
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dayData = data[String(d)];
+        if (!dayData) continue;
+
+        /* ── 일자별 재단실적: 재단기별 데이터 ── */
+        if (tbody && dayData.machines) {
+            CUTTER_MACHINES.forEach(function (name, idx) {
+                var val = dayData.machines[name];
+                if (val !== undefined && val !== null) {
+                    var cell = tbody.querySelector('td[data-cutter-machine="' + idx + '"][data-cutter-day="' + d + '"]');
+                    if (cell) cell.textContent = fmt(val);
+                }
+            });
+        }
+
+        /* ── 일자별 단폭/두폭 재단실적 ── */
+        if (widthTbody && dayData.width) {
+            var singleVal = dayData.width['단폭'] || 0;
+            var doubleVal = dayData.width['두폭'] || 0;
+            var totalVal = singleVal + doubleVal;
+
+            var singleCell = widthTbody.querySelector('td[data-cutter-width="single"][data-cutter-width-day="' + d + '"]');
+            var doubleCell = widthTbody.querySelector('td[data-cutter-width="double"][data-cutter-width-day="' + d + '"]');
+            var totalCell = widthTbody.querySelector('td[data-cutter-width="total"][data-cutter-width-day="' + d + '"]');
+            var ratioCell = widthTbody.querySelector('td[data-cutter-width="ratio"][data-cutter-width-day="' + d + '"]');
+
+            if (singleCell && singleVal) singleCell.textContent = fmt(singleVal);
+            if (doubleCell && doubleVal) doubleCell.textContent = fmt(doubleVal);
+            if (totalCell && totalVal) totalCell.textContent = fmt(totalVal);
+            if (ratioCell && totalVal > 0) {
+                var ratio = (doubleVal / totalVal * 100);
+                ratioCell.textContent = ratio.toFixed(1) + '%';
+            }
+        }
+    }
+
+    /* 단폭/두폭 평균 계산 */
+    calcCutterWidthAvg(daysInMonth);
+}
+
+/**
+ * 단폭/두폭 평균 계산
+ * @param {number} daysInMonth
+ */
+function calcCutterWidthAvg(daysInMonth) {
+    var widthTbody = document.getElementById('cutter-width-tbody');
+    if (!widthTbody) return;
+
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : ''; };
+
+    CUTTER_WIDTH_ROWS.forEach(function (row) {
+        var sum = 0, count = 0;
+        for (var d = 1; d <= daysInMonth; d++) {
+            var cell = widthTbody.querySelector('td[data-cutter-width="' + row.key + '"][data-cutter-width-day="' + d + '"]');
+            if (cell && cell.textContent.trim()) {
+                var txt = cell.textContent.replace(/,/g, '').replace(/%/, '');
+                var val = parseFloat(txt) || 0;
+                sum += val;
+                count++;
+            }
+        }
+        var avgCell = widthTbody.querySelector('td[data-cutter-width-avg="' + row.key + '"]');
+        if (avgCell) {
+            if (count > 0) {
+                var avg = sum / count;
+                avgCell.textContent = row.key === 'ratio' ? avg.toFixed(1) + '%' : fmt(avg);
+            } else {
+                avgCell.textContent = '';
+            }
+        }
+    });
+}
+
+/**
+ * 카타 목표량 서버 저장 (백그라운드)
+ * @param {number} daysInMonth
+ */
+function saveCutterTargets(daysInMonth) {
+    var tbody = document.getElementById('cutter-daily-tbody');
+    if (!tbody) return;
+
+    var targets = {};
+    for (var d = 1; d <= daysInMonth; d++) {
+        var inp = tbody.querySelector('.cutter-target-input[data-day="' + d + '"]');
+        if (inp && inp.value.trim()) {
+            targets[String(d)] = parseFloat(inp.value.replace(/,/g, '')) || 0;
+        }
+    }
+
+    fetch('/api/cutter-target/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            year_month: cutterState.yearMonth,
+            targets: targets,
+            user_id: 'system',
+        }),
+    }).catch(function (err) {
+        console.error('[카타 목표량 저장 오류]', err);
+    });
+}
+
+/**
+ * 카타 목표량 서버 로드 → input에 채우기 → 계산
+ * @param {number} daysInMonth
+ */
+function loadCutterTargets(daysInMonth) {
+    var ym = cutterState.yearMonth;
+    if (!ym) {
+        calcCutterTotals(daysInMonth);
+        return;
+    }
+
+    fetch('/api/cutter-target/load?year_month=' + encodeURIComponent(ym))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                var tbody = document.getElementById('cutter-daily-tbody');
+                if (!tbody) return;
+                var data = result.data;
+                for (var d = 1; d <= daysInMonth; d++) {
+                    var val = data[String(d)];
+                    if (val !== undefined && val !== null) {
+                        var inp = tbody.querySelector('.cutter-target-input[data-day="' + d + '"]');
+                        if (inp) inp.value = val;
+                    }
+                }
+            }
+            calcCutterTotals(daysInMonth);
+            calcCutterDiff(daysInMonth);
+        })
+        .catch(function (err) {
+            console.error('[카타 목표량 로드 오류]', err);
+            calcCutterTotals(daysInMonth);
+            calcCutterDiff(daysInMonth);
+        });
+}
+
+/**
+ * 카타 일자별 재단실적 초기화
+ */
+function initCutterDaily() {
+    var monthInput = document.getElementById('cutter-month-selector');
+    if (!monthInput) return;
+
+    var now = new Date();
+    var yyyy = now.getFullYear();
+    var mm = String(now.getMonth() + 1).padStart(2, '0');
+    monthInput.value = yyyy + '-' + mm;
+    cutterState.yearMonth = yyyy + '-' + mm;
+
+    renderCutterDailyTable();
+
+    monthInput.addEventListener('change', function () {
+        cutterState.yearMonth = this.value;
+        renderCutterDailyTable();
+    });
+}
+
+/* ══════════════════════════════════════════════
+   카타 — 월별 재단실적 평균
+   ══════════════════════════════════════════════ */
+
+var cutterMonthlyYear = new Date().getFullYear();
+
+/**
+ * 월별 재단실적 평균 테이블 렌더링
+ * 행: 재단기 #2~#9, 총합계, 가동대수, 목표량, 실적, 차이
+ * 열: 1~12월
+ */
+function renderCutterMonthlyTable(data) {
+    var thead = document.getElementById('cutter-monthly-thead');
+    var tbody = document.getElementById('cutter-monthly-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = cutterMonthlyYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '</tr>';
+    thead.innerHTML = thRow;
+
+    /* ── 행 정의 ── */
+    var allRows = [];
+
+    /* 재단기 8개 */
+    CUTTER_MACHINES.forEach(function (name, idx) {
+        allRows.push({ key: 'machine-' + idx, label: name, isSummary: false });
+    });
+
+    /* 요약 행 */
+    CUTTER_SUMMARY_ROWS.forEach(function (row) {
+        allRows.push({ key: row.key, label: row.label, isSummary: true });
+    });
+
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : '-'; };
+    var monthData = data || {};
+
+    var html = '';
+    allRows.forEach(function (rowDef) {
+        var cls = '';
+        if (rowDef.key === 'total') cls = ' class="pkg-row-total"';
+        html += '<tr' + cls + '>';
+        html += '<td>' + rowDef.label + '</td>';
+
+        months.forEach(function (m) {
+            var mm = String(m).padStart(2, '0');
+            var md = monthData[mm] || {};
+            var val = md[rowDef.key] || 0;
+            html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
+        });
+
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 월별 재단실적 평균 데이터 로드
+ * 해당 연도의 일자별 데이터를 로드 → 월 말일까지 데이터가 있으면 평균 계산
+ */
+function loadCutterMonthlyData() {
+    var year = cutterMonthlyYear;
+    fetch('/api/cutter-daily/load-year?year=' + encodeURIComponent(year))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                var monthlyAvg = calcCutterMonthlyAvg(result.data, year);
+                renderCutterMonthlyTable(monthlyAvg);
+            } else {
+                renderCutterMonthlyTable({});
+            }
+        })
+        .catch(function (err) {
+            console.error('[월별 재단실적 평균 로드 오류]', err);
+            renderCutterMonthlyTable({});
+        });
+}
+
+/**
+ * 일자별 데이터에서 월별 평균 계산
+ * 월의 마지막 일까지 데이터가 있는 월만 평균 계산
+ * @param {Object} yearData — { '01': { '1': {machines, width}, ... }, '09': {...} }
+ * @param {number} year
+ * @returns {Object} — { '01': { 'machine-0': avg, ..., 'total': avg, 'active': avg, ... }, ... }
+ */
+function calcCutterMonthlyAvg(yearData, year) {
+    var result = {};
+
+    Object.keys(yearData).forEach(function (mm) {
+        var monthData = yearData[mm];
+        var monthNum = parseInt(mm, 10);
+        var daysInMonth = new Date(year, monthNum, 0).getDate();
+
+        /* 마지막 일자에 데이터가 있는지 확인 */
+        var lastDayData = monthData[String(daysInMonth)];
+        if (!lastDayData) return;  /* 말일 데이터 없으면 건너뜀 */
+
+        var avgData = {};
+
+        /* 재단기별 평균 */
+        CUTTER_MACHINES.forEach(function (name, idx) {
+            var sum = 0, count = 0;
+            for (var d = 1; d <= daysInMonth; d++) {
+                var dayData = monthData[String(d)];
+                if (dayData && dayData.machines && dayData.machines[name] !== undefined) {
+                    sum += Number(dayData.machines[name]) || 0;
+                    count++;
+                }
+            }
+            avgData['machine-' + idx] = count > 0 ? Math.round(sum / count) : 0;
+        });
+
+        /* 총합계(실적) 평균: 각 일자의 재단기 합산 → 평균 */
+        var totalSum = 0, totalCount = 0;
+        /* 가동대수 평균 */
+        var activeSum = 0, activeCount = 0;
+
+        for (var d = 1; d <= daysInMonth; d++) {
+            var dayData = monthData[String(d)];
+            if (!dayData || !dayData.machines) continue;
+
+            var dayTotal = 0;
+            var dayActive = 0;
+            CUTTER_MACHINES.forEach(function (name) {
+                if (dayData.machines[name] !== undefined) {
+                    dayTotal += Number(dayData.machines[name]) || 0;
+                    dayActive++;
+                }
+            });
+
+            if (dayActive > 0) {
+                totalSum += dayTotal;
+                totalCount++;
+                activeSum += dayActive;
+                activeCount++;
+            }
+        }
+
+        avgData['total'] = totalCount > 0 ? Math.round(totalSum / totalCount) : 0;
+        avgData['active'] = activeCount > 0 ? Math.round(activeSum / activeCount) : 0;
+
+        /* 목표량 평균: 목표량은 별도 API에서 로드해야 하지만, 일자별 평균 열 값과 동일 */
+        /* 차이 평균 = 총합계 평균 - 목표량 평균 */
+        avgData['target'] = 0;
+        avgData['diff'] = 0;
+
+        result[mm] = avgData;
+    });
+
+    return result;
+}
+
+/**
+ * 월별 재단실적 평균 초기화
+ */
+function initCutterMonthly() {
+    var now = new Date();
+    var yearSelect = document.getElementById('cutter-monthly-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === cutterMonthlyYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            cutterMonthlyYear = parseInt(this.value);
+            loadCutterMonthlyData();
+        });
+    }
+    loadCutterMonthlyData();
+}
+
+/* ══════════════════════════════════════════════
+   카타 — 일자별 단폭/두폭 재단실적
+   ══════════════════════════════════════════════ */
+
+var cutterWidthState = { yearMonth: '' };
+
+/** 단폭/두폭 행 정의 */
+var CUTTER_WIDTH_ROWS = [
+    { key: 'single', label: '단폭' },
+    { key: 'double', label: '두폭' },
+    { key: 'total',  label: '총합계' },
+    { key: 'ratio',  label: '두폭 비율' },
+];
+
+/**
+ * 일자별 단폭/두폭 재단실적 테이블 렌더링
+ */
+function renderCutterWidthTable() {
+    var headerRow = document.getElementById('cutter-width-header-row');
+    var tbody = document.getElementById('cutter-width-tbody');
+    if (!headerRow || !tbody) return;
+
+    var ym = cutterWidthState.yearMonth;
+    if (!ym) return;
+    var parts = ym.split('-');
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var daysInMonth = new Date(year, month, 0).getDate();
+
+    /* ── 헤더: 월 라벨 + 일자 + 평균 ── */
+    headerRow.innerHTML = '';
+    var thLabel = document.createElement('th');
+    thLabel.className = 'subulbu-th-label';
+    thLabel.textContent = month + '월';
+    headerRow.appendChild(thLabel);
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateObj = new Date(year, month - 1, d);
+        var dayIdx = dateObj.getDay();
+        var dayName = CUTTER_DAY_NAMES[dayIdx];
+        var weekendClass = '';
+        if (dayIdx === 0) weekendClass = ' subulbu-sun';
+        else if (dayIdx === 6) weekendClass = ' subulbu-sat';
+
+        var th = document.createElement('th');
+        th.className = 'subulbu-date-th' + weekendClass;
+        th.innerHTML = d + '일<span class="subulbu-date-day">(' + dayName + ')</span>';
+        headerRow.appendChild(th);
+    }
+
+    var thAvg = document.createElement('th');
+    thAvg.className = 'subulbu-date-th';
+    thAvg.style.background = '#eef2ff';
+    thAvg.textContent = '평균';
+    headerRow.appendChild(thAvg);
+
+    /* ── tbody ── */
+    var html = '';
+    CUTTER_WIDTH_ROWS.forEach(function (row) {
+        var cls = 'subulbu-row';
+        if (row.key === 'total') cls += ' subulbu-row-gye';
+        html += '<tr class="' + cls + '">';
+        html += '<td class="subulbu-label">' + row.label + '</td>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            html += '<td class="subulbu-data" data-cutter-width="' + row.key + '" data-cutter-width-day="' + d + '"></td>';
+        }
+        html += '<td class="subulbu-data" data-cutter-width-avg="' + row.key + '" style="background:#f8fafc;font-weight:600;"></td>';
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 일자별 단폭/두폭 재단실적 초기화
+ */
+function initCutterWidth() {
+    var monthInput = document.getElementById('cutter-width-month-selector');
+    if (!monthInput) return;
+
+    var now = new Date();
+    var yyyy = now.getFullYear();
+    var mm = String(now.getMonth() + 1).padStart(2, '0');
+    monthInput.value = yyyy + '-' + mm;
+    cutterWidthState.yearMonth = yyyy + '-' + mm;
+
+    renderCutterWidthTable();
+
+    monthInput.addEventListener('change', function () {
+        cutterWidthState.yearMonth = this.value;
+        renderCutterWidthTable();
+    });
+}
+
+/* ══════════════════════════════════════════════
+   카타 — 월별 단폭/두폭 재단실적
+   ══════════════════════════════════════════════ */
+
+var cutterWidthMonthlyYear = new Date().getFullYear();
+
+/**
+ * 월별 단폭/두폭 재단실적 테이블 렌더링
+ */
+function renderCutterWidthMonthlyTable(data) {
+    var thead = document.getElementById('cutter-width-monthly-thead');
+    var tbody = document.getElementById('cutter-width-monthly-tbody');
+    if (!thead || !tbody) return;
+
+    var now = new Date();
+    var year = cutterWidthMonthlyYear;
+    var isCurrentYear = (year === now.getFullYear());
+    var maxMonth = isCurrentYear ? (now.getMonth() + 1) : 12;
+
+    var months = [];
+    for (var m = 1; m <= maxMonth; m++) months.push(m);
+
+    /* ── thead ── */
+    var thRow = '<tr><th>구분</th>';
+    months.forEach(function (m) { thRow += '<th>' + m + '월</th>'; });
+    thRow += '</tr>';
+    thead.innerHTML = thRow;
+
+    /* ── tbody ── */
+    var fmt = function (v) { return v ? Math.round(v).toLocaleString() : '-'; };
+    var monthData = data || {};
+
+    var html = '';
+    CUTTER_WIDTH_ROWS.forEach(function (rowDef) {
+        var cls = '';
+        if (rowDef.key === 'total') cls = ' class="pkg-row-total"';
+        html += '<tr' + cls + '>';
+        html += '<td>' + rowDef.label + '</td>';
+
+        months.forEach(function (m) {
+            var mm = String(m).padStart(2, '0');
+            var md = monthData[mm] || {};
+            var val = md[rowDef.key] || 0;
+            if (rowDef.key === 'ratio') {
+                html += '<td class="pkg-data-cell">' + (val ? Math.round(val) + '%' : '-') + '</td>';
+            } else {
+                html += '<td class="pkg-data-cell">' + fmt(val) + '</td>';
+            }
+        });
+
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 월별 단폭/두폭 재단실적 데이터 로드
+ * 일자별 데이터에서 말일까지 채워진 월의 평균을 계산
+ */
+function loadCutterWidthMonthlyData() {
+    var year = cutterWidthMonthlyYear;
+    fetch('/api/cutter-daily/load-year?year=' + encodeURIComponent(year))
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+            if (result.success && result.data) {
+                var monthlyAvg = calcCutterWidthMonthlyAvg(result.data, year);
+                renderCutterWidthMonthlyTable(monthlyAvg);
+            } else {
+                renderCutterWidthMonthlyTable({});
+            }
+        })
+        .catch(function (err) {
+            console.error('[월별 단폭/두폭 로드 오류]', err);
+            renderCutterWidthMonthlyTable({});
+        });
+}
+
+/**
+ * 일자별 width 데이터에서 월별 평균 계산
+ * 말일까지 데이터가 있는 월만 평균 계산
+ * @param {Object} yearData — { '09': { '8': {machines, width}, '9': {...} }, ... }
+ * @param {number} year
+ * @returns {Object} — { '09': { single: avg, double: avg, total: avg, ratio: avg }, ... }
+ */
+function calcCutterWidthMonthlyAvg(yearData, year) {
+    var result = {};
+
+    Object.keys(yearData).forEach(function (mm) {
+        var monthData = yearData[mm];
+        var monthNum = parseInt(mm, 10);
+        var daysInMonth = new Date(year, monthNum, 0).getDate();
+
+        /* 마지막 일자에 데이터가 있는지 확인 */
+        var lastDayData = monthData[String(daysInMonth)];
+        if (!lastDayData) return;
+
+        var singleSum = 0, doubleSum = 0, count = 0;
+
+        for (var d = 1; d <= daysInMonth; d++) {
+            var dayData = monthData[String(d)];
+            if (!dayData || !dayData.width) continue;
+
+            var s = Number(dayData.width['단폭']) || 0;
+            var db = Number(dayData.width['두폭']) || 0;
+            if (s > 0 || db > 0) {
+                singleSum += s;
+                doubleSum += db;
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            var avgSingle = singleSum / count;
+            var avgDouble = doubleSum / count;
+            var avgTotal = avgSingle + avgDouble;
+            var avgRatio = avgTotal > 0 ? (avgDouble / avgTotal * 100) : 0;
+
+            result[mm] = {
+                single: Math.round(avgSingle),
+                double: Math.round(avgDouble),
+                total: Math.round(avgTotal),
+                ratio: Math.round(avgRatio),
+            };
+        }
+    });
+
+    return result;
+}
+
+/**
+ * 월별 단폭/두폭 재단실적 초기화
+ */
+function initCutterWidthMonthly() {
+    var now = new Date();
+    var yearSelect = document.getElementById('cutter-width-monthly-year-filter');
+    if (yearSelect) {
+        var curYear = now.getFullYear();
+        for (var y = curYear; y >= curYear - 5; y--) {
+            var opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '년';
+            if (y === cutterWidthMonthlyYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+        yearSelect.addEventListener('change', function () {
+            cutterWidthMonthlyYear = parseInt(this.value);
+            loadCutterWidthMonthlyData();
+        });
+    }
+    loadCutterWidthMonthlyData();
 }
 
 /* ── 윈도우 리사이즈 시 카드 높이 재동기화 ── */

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260827d">
+    <link rel="stylesheet" href="css/style.css?v=20260909r">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -844,7 +844,10 @@
                 <!-- 왼쪽: 월령분석 표 -->
                 <div class="pkg-card pkg-card-left">
                     <div class="pkg-card-header">
-                        <h3 class="pkg-card-title">월령분석</h3>
+                        <div>
+                            <h3 class="pkg-card-title">월령분석</h3>
+                            <p class="pkg-card-sub" id="mr-aging-date-label"></p>
+                        </div>
                         <span class="outsource-unit-label">단위 : ton</span>
                     </div>
                     <div class="pkg-table-wrap">
@@ -864,16 +867,53 @@
                         </table>
                     </div>
                 </div>
-                <!-- 오른쪽: 월령분석 그래프 -->
+                <!-- 오른쪽: 180일 초과 리스트 -->
                 <div class="pkg-right-stack">
-                    <div class="pkg-card pkg-card-right">
+                    <div class="pkg-card pkg-card-right" id="mr-over180-card">
                         <div class="pkg-card-header">
-                            <h3 class="pkg-card-title">월령분석 차트</h3>
+                            <div>
+                                <h3 class="pkg-card-title">180일 초과 리스트</h3>
+                                <p class="pkg-card-sub" id="mr-over180-date-label"></p>
+                            </div>
+                            <span class="outsource-unit-label">단위 : ton</span>
                         </div>
-                        <div class="pkg-chart-wrap">
-                            <canvas id="mr-aging-chart"></canvas>
+                        <div class="pkg-table-wrap over180-table-wrap">
+                            <table class="pkg-summary-table over180-table" id="mr-over180-table">
+                                <thead>
+                                    <tr>
+                                        <th>지종코드</th>
+                                        <th>평량</th>
+                                        <th>지폭</th>
+                                        <th>미터수</th>
+                                        <th>개수</th>
+                                        <th>중량(ton)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mr-over180-tbody">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ── 밀롤창고 월령분석 월말기준 ── -->
+            <div class="slitter-card subulbu-card" style="margin-top:24px;">
+                <div class="subulbu-card-header">
+                    <div>
+                        <h3 class="subulbu-title">월령분석 월말기준</h3>
+                        <p class="pkg-card-sub">매월 말일 월령분석 데이터 입니다.</p>
+                    </div>
+                    <div class="subulbu-controls">
+                        <span class="outsource-unit-label">단위 : ton</span>
+                        <select id="mr-aging-monthly-year-filter" class="pkg-year-select"></select>
+                    </div>
+                </div>
+                <div class="pkg-table-wrap" style="overflow-x:auto;">
+                    <table class="pkg-summary-table" id="mr-aging-monthly-table">
+                        <thead id="mr-aging-monthly-thead"></thead>
+                        <tbody id="mr-aging-monthly-tbody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -929,11 +969,11 @@
                         </div>
                     </div>
 
-                    <!-- ── 월별 실적량 (일자별 상세내역 카드 내부) ── -->
+                    <!-- ── 슬리터 월별 실적량 (일자별 상세내역 카드 내부) ── -->
                     <div class="slitter-monthly-section">
                         <div class="slitter-monthly-header">
                             <div>
-                                <h4 class="slitter-monthly-title">월별 실적량</h4>
+                                <h4 class="slitter-monthly-title">슬리터 월별 실적량</h4>
                                 <p class="slitter-monthly-sub"><span id="slitter-monthly-date-label"></span>, 단위 : ton</p>
                             </div>
                             <select id="slitter-monthly-year-filter" class="pkg-year-select"></select>
@@ -942,6 +982,23 @@
                             <table class="pkg-summary-table" id="slitter-monthly-table">
                                 <thead id="slitter-monthly-thead"></thead>
                                 <tbody id="slitter-monthly-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── 수재단 월별 실적량 ── -->
+                    <div class="slitter-monthly-section">
+                        <div class="slitter-monthly-header">
+                            <div>
+                                <h4 class="slitter-monthly-title">수재단 월별 실적량</h4>
+                                <p class="slitter-monthly-sub"><span id="recut-monthly-date-label"></span>, 단위 : ton</p>
+                            </div>
+                            <select id="recut-monthly-year-filter" class="pkg-year-select"></select>
+                        </div>
+                        <div class="pkg-table-wrap">
+                            <table class="pkg-summary-table" id="recut-monthly-table">
+                                <thead id="recut-monthly-thead"></thead>
+                                <tbody id="recut-monthly-tbody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -1069,30 +1126,91 @@
                     <h2>카타</h2>
                     <p>카타 공정 재공실적 현황을 조회하고 분석합니다.</p>
                 </div>
-                <button class="primary" disabled>엑셀 다운로드</button>
             </div>
-            <div class="table-scroll-container">
-                <div class="table-wrapper" style="overflow-x:auto;">
-                    <table class="wip-analysis-table">
-                        <thead>
-                            <tr>
-                                <th>일자</th>
-                                <th>공정</th>
-                                <th>자재코드</th>
-                                <th>자재명</th>
-                                <th>생산계획</th>
-                                <th>생산실적</th>
-                                <th>달성률</th>
-                                <th>재공재고</th>
-                                <th>비고</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="9" style="text-align:center;padding:60px 20px;color:#94a3b8;">카타 데이터가 없습니다. 데이터를 등록하면 여기에 표시됩니다.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <!-- ── 일자별 재단실적 ── -->
+            <div class="slitter-card subulbu-card">
+                <div class="subulbu-card-header">
+                    <h3 class="subulbu-title">일자별 재단실적</h3>
+                    <div class="subulbu-controls">
+                        <input type="month" id="cutter-month-selector" class="subulbu-month-input">
+                    </div>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="subulbu-table" id="cutter-daily-table">
+                            <thead>
+                                <tr id="cutter-header-row">
+                                    <th class="subulbu-th-label" colspan="1" id="cutter-month-label"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cutter-daily-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 일자별 단폭/두폭 재단실적 ── -->
+            <div class="slitter-card subulbu-card" style="margin-top:24px;">
+                <div class="subulbu-card-header">
+                    <h3 class="subulbu-title">일자별 단폭/두폭 재단실적</h3>
+                    <div class="subulbu-controls">
+                        <input type="month" id="cutter-width-month-selector" class="subulbu-month-input">
+                    </div>
+                </div>
+                <div class="table-scroll-container">
+                    <div class="table-wrapper" style="overflow-x:auto;">
+                        <table class="subulbu-table" id="cutter-width-table">
+                            <thead>
+                                <tr id="cutter-width-header-row">
+                                    <th class="subulbu-th-label" colspan="1"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cutter-width-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 월별 재단실적 평균 + 월별 단폭/두폭 (좌우 배치) ── -->
+            <div class="cutter-monthly-row" style="display:flex;gap:24px;margin-top:24px;align-items:stretch;">
+                <!-- 왼쪽: 월별 재단실적 평균 -->
+                <div class="slitter-card subulbu-card cutter-monthly-card" style="margin-top:0;flex:1;min-width:0;">
+                    <div class="subulbu-card-header">
+                        <div>
+                            <h3 class="subulbu-title">월별 재단실적 평균</h3>
+                            <p class="pkg-card-sub">단위 : ton</p>
+                        </div>
+                        <div class="subulbu-controls">
+                            <select id="cutter-monthly-year-filter" class="pkg-year-select"></select>
+                        </div>
+                    </div>
+                    <div class="pkg-table-wrap" style="overflow-x:auto;">
+                        <table class="pkg-summary-table" id="cutter-monthly-table">
+                            <thead id="cutter-monthly-thead"></thead>
+                            <tbody id="cutter-monthly-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- 오른쪽: 월별 단폭/두폭 재단실적 -->
+                <div class="slitter-card subulbu-card cutter-monthly-card" style="margin-top:0;flex:1;min-width:0;">
+                    <div class="subulbu-card-header">
+                        <div>
+                            <h3 class="subulbu-title">월별 단폭/두폭 재단실적</h3>
+                            <p class="pkg-card-sub">단위 : ton</p>
+                        </div>
+                        <div class="subulbu-controls">
+                            <select id="cutter-width-monthly-year-filter" class="pkg-year-select"></select>
+                        </div>
+                    </div>
+                    <div class="pkg-table-wrap" style="overflow-x:auto;">
+                        <table class="pkg-summary-table" id="cutter-width-monthly-table">
+                            <thead id="cutter-width-monthly-thead"></thead>
+                            <tbody id="cutter-width-monthly-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1641,6 +1759,6 @@
 
 </div><!-- /.app-layout -->
 
-<script src="js/app.js?v=20260827d"></script>
+<script src="js/app.js?v=20260909r"></script>
 </body>
 </html>

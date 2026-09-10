@@ -509,10 +509,28 @@ SLITTER_SUBULBU_FILE = os.path.join(DATA_DIR, 'slitter_subulbu.json')
 # ─── 슬리터 수불부 작업 데이터 파일 (I/F 내수/수출) ───
 SLITTER_SUBULBU_WORK_FILE = os.path.join(DATA_DIR, 'slitter_subulbu_work.json')
 
+# ─── 슬리터 월별 실적량 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+SLITTER_MONTHLY_FILE = os.path.join(DATA_DIR, 'slitter_monthly.json')
+
+# ─── 수재단 월별 실적량 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+RECUT_MONTHLY_FILE = os.path.join(DATA_DIR, 'recut_monthly.json')
+
+# ─── 밀롤창고 월령분석 원본(I/F) 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+MILLROLL_AGING_RAW_FILE = os.path.join(DATA_DIR, 'millroll_aging_raw.json')
+
+# ─── 밀롤창고 월령분석 월말기준 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+MILLROLL_AGING_MONTHLY_FILE = os.path.join(DATA_DIR, 'millroll_aging_monthly.json')
+
 # ─── 밀롤창고 재공현황 데이터 파일 ───
 MILLROLL_INVENTORY_FILE = os.path.join(DATA_DIR, 'millroll_inventory.json')
 MILLROLL_DAILY_FILE = os.path.join(DATA_DIR, 'millroll_daily.json')
 MILLROLL_AGING_FILE = os.path.join(DATA_DIR, 'millroll_aging.json')
+
+# ─── 카타 일자별 재단실적 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+CUTTER_DAILY_FILE = os.path.join(DATA_DIR, 'cutter_daily.json')
+
+# ─── 카타 일자별 재단실적 목표량 데이터 파일 (DB 미연결 시 JSON 폴백) ───
+CUTTER_TARGET_FILE = os.path.join(DATA_DIR, 'cutter_target.json')
 
 
 def load_json_file(filepath, default=None):
@@ -1596,10 +1614,708 @@ def api_millroll_aging_save():
     return jsonify({'success': True, 'message': '밀롤창고 월령분석 저장 완료'})
 
 
+# ─── 밀롤창고 월령분석 원본(I/F) 데이터 API ───
+
+@app.route('/api/millroll-aging-raw/load', methods=['GET'])
+def api_millroll_aging_raw_load():
+    """밀롤창고 월령분석 원본(I/F) 데이터 로드 — ref_date 파라미터 (없으면 최신)"""
+    ref_date = request.args.get('ref_date', '').strip()
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                if ref_date:
+                    cursor.execute(
+                        'SELECT ref_date, domestic, paper_code, basis_weight, width, '
+                        'meter, weight_kg, warehouse_date '
+                        'FROM ps_millroll_aging_raw WHERE ref_date = %s '
+                        'ORDER BY domestic, paper_code, basis_weight, width',
+                        (ref_date,)
+                    )
+                else:
+                    cursor.execute(
+                        'SELECT ref_date, domestic, paper_code, basis_weight, width, '
+                        'meter, weight_kg, warehouse_date '
+                        'FROM ps_millroll_aging_raw WHERE ref_date = '
+                        '(SELECT MAX(ref_date) FROM ps_millroll_aging_raw) '
+                        'ORDER BY domestic, paper_code, basis_weight, width'
+                    )
+                rows = cursor.fetchall()
+                # date → str 변환
+                for r in rows:
+                    if r.get('ref_date'):
+                        r['ref_date'] = str(r['ref_date'])
+                    if r.get('warehouse_date'):
+                        r['warehouse_date'] = str(r['warehouse_date'])
+            rd = rows[0]['ref_date'] if rows else ref_date
+            return jsonify({'success': True, 'data': {'ref_date': rd, 'rows': rows}})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(MILLROLL_AGING_RAW_FILE, {})
+    if ref_date:
+        record = all_data.get(ref_date, {})
+    else:
+        # 최신 날짜
+        if all_data:
+            latest_key = max(all_data.keys())
+            record = all_data[latest_key]
+            ref_date = latest_key
+        else:
+            record = {}
+    rows = record.get('rows', []) if isinstance(record, dict) else record
+    return jsonify({'success': True, 'data': {'ref_date': ref_date, 'rows': rows}})
+
+
+@app.route('/api/millroll-aging-raw/save', methods=['POST'])
+def api_millroll_aging_raw_save():
+    """밀롤창고 월령분석 원본(I/F) 데이터 저장 — ref_date 기준 전체 교체"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    ref_date = body.get('ref_date', '').strip()
+    rows = body.get('rows', [])
+    if not ref_date:
+        return jsonify({'success': False, 'message': 'ref_date 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                # 해당 기준일 기존 데이터 삭제 후 재삽입
+                cursor.execute('DELETE FROM ps_millroll_aging_raw WHERE ref_date = %s', (ref_date,))
+                for row in rows:
+                    cursor.execute(
+                        'INSERT INTO ps_millroll_aging_raw '
+                        '(ref_date, domestic, paper_code, basis_weight, width, meter, weight_kg, warehouse_date) '
+                        'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+                        (ref_date, row.get('domestic', ''), row.get('paper_code', ''),
+                         row.get('basis_weight', 0), row.get('width', 0),
+                         row.get('meter', 0), row.get('weight_kg', 0),
+                         row.get('warehouse_date') or None)
+                    )
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'message': f'{ref_date} 밀롤 월령분석 원본 {len(rows)}건 저장 완료',
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(MILLROLL_AGING_RAW_FILE, {})
+    all_data[ref_date] = {
+        'ref_date': ref_date,
+        'rows': rows,
+        'updated_at': datetime.now().isoformat(),
+    }
+    save_json_file(MILLROLL_AGING_RAW_FILE, all_data)
+    return jsonify({
+        'success': True,
+        'message': f'{ref_date} 밀롤 월령분석 원본 {len(rows)}건 저장 완료 (JSON)',
+    })
+
+
+# ─── 밀롤창고 월령분석 월말기준 API ───
+
+@app.route('/api/millroll-aging-monthly/load', methods=['GET'])
+def api_millroll_aging_monthly_load():
+    """월령분석 월말기준 로드 — year 파라미터 필수"""
+    year = request.args.get('year', '').strip()
+    if not year:
+        return jsonify({'success': False, 'message': 'year 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT year_month, under90, r90_150, r151_180, over180 '
+                    'FROM ps_millroll_aging_monthly '
+                    'WHERE year_month LIKE %s ORDER BY year_month',
+                    (year + '-%',)
+                )
+                rows = cursor.fetchall()
+            data = {}
+            for r in rows:
+                mm = r['year_month'].split('-')[1]
+                data[mm] = {
+                    'under90': float(r['under90']),
+                    'r90_150': float(r['r90_150']),
+                    'r151_180': float(r['r151_180']),
+                    'over180': float(r['over180']),
+                }
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(MILLROLL_AGING_MONTHLY_FILE, {})
+    data = {}
+    for ym_key, record in all_data.items():
+        if ym_key.startswith(year + '-'):
+            mm = ym_key.split('-')[1]
+            data[mm] = record
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/millroll-aging-monthly/save', methods=['POST'])
+def api_millroll_aging_monthly_save():
+    """월령분석 월말기준 저장 — year_month + 구간별 ton 값"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    ym = body.get('year_month', '').strip()
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 필요'}), 400
+
+    under90 = body.get('under90', 0)
+    r90_150 = body.get('r90_150', 0)
+    r151_180 = body.get('r151_180', 0)
+    over180 = body.get('over180', 0)
+    user_id = body.get('user_id', 'system')
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'INSERT INTO ps_millroll_aging_monthly (year_month, under90, r90_150, r151_180, over180, updated_by) '
+                    'VALUES (%s, %s, %s, %s, %s, %s) '
+                    'ON DUPLICATE KEY UPDATE under90=VALUES(under90), r90_150=VALUES(r90_150), '
+                    'r151_180=VALUES(r151_180), over180=VALUES(over180), updated_by=VALUES(updated_by)',
+                    (ym, under90, r90_150, r151_180, over180, user_id)
+                )
+            conn.commit()
+            return jsonify({'success': True, 'message': f'{ym} 월령분석 월말기준 저장 완료'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(MILLROLL_AGING_MONTHLY_FILE, {})
+    all_data[ym] = {
+        'under90': under90,
+        'r90_150': r90_150,
+        'r151_180': r151_180,
+        'over180': over180,
+    }
+    save_json_file(MILLROLL_AGING_MONTHLY_FILE, all_data)
+    return jsonify({'success': True, 'message': f'{ym} 월령분석 월말기준 저장 완료 (JSON)'})
+
+
+# ─── 카타 일자별 재단실적 데이터 API ───
+
+def _load_cutter_daily_from_db(conn, date_prefix):
+    """DB에서 카타 일자별 데이터를 로드하여 JSON 구조로 변환"""
+    result = {}
+    try:
+        with conn.cursor() as cursor:
+            # 재단기별
+            cursor.execute(
+                'SELECT work_date, machine_name, weight_ton FROM ps_cutter_daily_machine '
+                'WHERE work_date LIKE %s ORDER BY work_date', (date_prefix + '%',))
+            for r in cursor.fetchall():
+                day = str(r['work_date'].day)
+                if day not in result:
+                    result[day] = {'machines': {}, 'width': {}}
+                result[day]['machines'][r['machine_name']] = int(r['weight_ton'])
+            # 단폭/두폭
+            cursor.execute(
+                'SELECT work_date, width_type, weight_ton FROM ps_cutter_daily_width '
+                'WHERE work_date LIKE %s ORDER BY work_date', (date_prefix + '%',))
+            for r in cursor.fetchall():
+                day = str(r['work_date'].day)
+                if day not in result:
+                    result[day] = {'machines': {}, 'width': {}}
+                result[day]['width'][r['width_type']] = int(r['weight_ton'])
+    except Exception:
+        pass
+    return result
+
+
+@app.route('/api/cutter-daily/load', methods=['GET'])
+def api_cutter_daily_load():
+    """카타 일자별 재단실적 로드 — year_month 파라미터 필수"""
+    ym = request.args.get('year_month', '').strip()
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            data = _load_cutter_daily_from_db(conn, ym)
+            if data:
+                return jsonify({'success': True, 'data': data})
+        except Exception:
+            pass
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(CUTTER_DAILY_FILE, {})
+    data = all_data.get(ym, {})
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/cutter-daily/load-year', methods=['GET'])
+def api_cutter_daily_load_year():
+    """카타 일자별 재단실적 — 해당 연도 전체 월 데이터 로드"""
+    year = request.args.get('year', '').strip()
+    if not year:
+        return jsonify({'success': False, 'message': 'year 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            year_data = {}
+            for m in range(1, 13):
+                mm = f'{m:02d}'
+                prefix = f'{year}-{mm}'
+                month_data = _load_cutter_daily_from_db(conn, prefix)
+                if month_data:
+                    year_data[f'{m:02d}'] = month_data
+            if year_data:
+                return jsonify({'success': True, 'data': year_data})
+        except Exception:
+            pass
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(CUTTER_DAILY_FILE, {})
+    year_data = {}
+    for ym_key, record in all_data.items():
+        if ym_key.startswith(year + '-'):
+            mm = ym_key.split('-')[1]
+            year_data[mm] = record
+    return jsonify({'success': True, 'data': year_data})
+
+
+@app.route('/api/cutter-daily/save', methods=['POST'])
+def api_cutter_daily_save():
+    """카타 일자별 재단실적 저장 — work_date + machines/width"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    work_date = body.get('work_date', '').strip()
+    machines = body.get('machines', {})
+    width = body.get('width', {})
+    if not work_date:
+        return jsonify({'success': False, 'message': 'work_date 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                for name, val in machines.items():
+                    cursor.execute(
+                        'INSERT INTO ps_cutter_daily_machine (work_date, machine_name, weight_ton) '
+                        'VALUES (%s, %s, %s) '
+                        'ON DUPLICATE KEY UPDATE weight_ton = VALUES(weight_ton)',
+                        (work_date, name, val))
+                for wtype, val in width.items():
+                    cursor.execute(
+                        'INSERT INTO ps_cutter_daily_width (work_date, width_type, weight_ton) '
+                        'VALUES (%s, %s, %s) '
+                        'ON DUPLICATE KEY UPDATE weight_ton = VALUES(weight_ton)',
+                        (work_date, wtype, val))
+            conn.commit()
+            return jsonify({'success': True, 'message': f'{work_date} 카타 일자별 재단실적 저장 완료'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    ym = work_date[:7]
+    day = str(int(work_date[8:10]))
+    all_data = load_json_file(CUTTER_DAILY_FILE, {})
+    if ym not in all_data:
+        all_data[ym] = {}
+    all_data[ym][day] = {'machines': machines, 'width': width}
+    save_json_file(CUTTER_DAILY_FILE, all_data)
+    return jsonify({'success': True, 'message': f'{work_date} 카타 일자별 재단실적 저장 완료 (JSON)'})
+
+
+# ─── 카타 일자별 재단실적 목표량 API ───
+
+@app.route('/api/cutter-target/load', methods=['GET'])
+def api_cutter_target_load():
+    """카타 목표량 로드 — year_month 파라미터 필수"""
+    ym = request.args.get('year_month', '').strip()
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT day_num, target_val FROM ps_cutter_target '
+                    'WHERE year_month = %s ORDER BY day_num',
+                    (ym,)
+                )
+                rows = cursor.fetchall()
+            data = {}
+            for r in rows:
+                data[str(r['day_num'])] = float(r['target_val'])
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(CUTTER_TARGET_FILE, {})
+    data = all_data.get(ym, {})
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/api/cutter-target/save', methods=['POST'])
+def api_cutter_target_save():
+    """카타 목표량 저장 — year_month + targets { '1': val, '2': val, ... }"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    ym = body.get('year_month', '').strip()
+    targets = body.get('targets', {})
+    user_id = body.get('user_id', 'system')
+
+    if not ym:
+        return jsonify({'success': False, 'message': 'year_month 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                for day_str, val in targets.items():
+                    cursor.execute(
+                        'INSERT INTO ps_cutter_target (year_month, day_num, target_val, updated_by) '
+                        'VALUES (%s, %s, %s, %s) '
+                        'ON DUPLICATE KEY UPDATE target_val = VALUES(target_val), updated_by = VALUES(updated_by)',
+                        (ym, int(day_str), val, user_id)
+                    )
+            conn.commit()
+            return jsonify({'success': True, 'message': f'{ym} 카타 목표량 저장 완료'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(CUTTER_TARGET_FILE, {})
+    all_data[ym] = targets
+    save_json_file(CUTTER_TARGET_FILE, all_data)
+    return jsonify({'success': True, 'message': f'{ym} 카타 목표량 저장 완료 (JSON)'})
+
+
+# ══════════════════════════════════════════════════════════
+# 슬리터 월별 실적량 / 수재단 월별 실적량 — DB 테이블 + API
+# ══════════════════════════════════════════════════════════
+
+def init_monthly_tables():
+    """DB 연결 시 슬리터/수재단 월별 실적량 테이블 자동 생성 (없으면 CREATE)"""
+    conn = get_db_connection()
+    if not conn:
+        print('[DB] 월별 실적량 테이블 생성 건너뜀 — DB 미연결 (JSON 폴백 사용)')
+        return
+    try:
+        with conn.cursor() as cursor:
+            # ── 슬리터 월별 실적량 ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_slitter_monthly (
+                    id          INT AUTO_INCREMENT PRIMARY KEY,
+                    year_month  VARCHAR(7)   NOT NULL COMMENT '년월 (YYYY-MM)',
+                    domestic    VARCHAR(20)  NOT NULL COMMENT '내수구분 (내수/수출)',
+                    weight      DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '실적량 (TON)',
+                    updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    updated_by  VARCHAR(50)  DEFAULT 'system',
+                    UNIQUE KEY uk_slitter_monthly (year_month, domestic)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='슬리터 월별 실적량'
+            ''')
+            # ── 수재단 월별 실적량 ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_recut_monthly (
+                    id          INT AUTO_INCREMENT PRIMARY KEY,
+                    year_month  VARCHAR(7)   NOT NULL COMMENT '년월 (YYYY-MM)',
+                    domestic    VARCHAR(20)  NOT NULL COMMENT '내수구분 (내수/수출)',
+                    weight      DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '실적량 (TON)',
+                    updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    updated_by  VARCHAR(50)  DEFAULT 'system',
+                    UNIQUE KEY uk_recut_monthly (year_month, domestic)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='수재단 월별 실적량'
+            ''')
+            # ── 카타 일자별 재단실적 (재단기별) ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_cutter_daily_machine (
+                    id           INT AUTO_INCREMENT PRIMARY KEY,
+                    work_date    DATE          NOT NULL COMMENT '작업일자',
+                    machine_name VARCHAR(50)   NOT NULL COMMENT '설비명 (3호기 재단기 #2 등)',
+                    weight_ton   INT           NOT NULL DEFAULT 0 COMMENT '실적량 (TON, 정수)',
+                    updated_at   DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_cutter_machine (work_date, machine_name),
+                    INDEX idx_cutter_machine_ym (work_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='카타 일자별 재단실적 (재단기별)'
+            ''')
+            # ── 카타 일자별 재단실적 (단폭/두폭) ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_cutter_daily_width (
+                    id           INT AUTO_INCREMENT PRIMARY KEY,
+                    work_date    DATE          NOT NULL COMMENT '작업일자',
+                    width_type   VARCHAR(20)   NOT NULL COMMENT '폭수 (단폭/두폭)',
+                    weight_ton   INT           NOT NULL DEFAULT 0 COMMENT '실적량 (TON, 정수)',
+                    updated_at   DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_cutter_width (work_date, width_type),
+                    INDEX idx_cutter_width_ym (work_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='카타 일자별 재단실적 (단폭/두폭)'
+            ''')
+            # ── 카타 일자별 재단실적 목표량 ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_cutter_target (
+                    id          INT AUTO_INCREMENT PRIMARY KEY,
+                    year_month  VARCHAR(7)    NOT NULL COMMENT '년월 (YYYY-MM)',
+                    day_num     INT           NOT NULL COMMENT '일자 (1~31)',
+                    target_val  DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '목표량',
+                    updated_at  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    updated_by  VARCHAR(50)   DEFAULT 'system',
+                    UNIQUE KEY uk_cutter_target (year_month, day_num)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='카타 일자별 재단실적 목표량'
+            ''')
+            # ── 밀롤창고 월령분석 월말기준 ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_millroll_aging_monthly (
+                    id          INT AUTO_INCREMENT PRIMARY KEY,
+                    year_month  VARCHAR(7)    NOT NULL COMMENT '년월 (YYYY-MM)',
+                    under90     DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '90일 미만 (TON)',
+                    r90_150     DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '90~150일 (TON)',
+                    r151_180    DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '151~180일 (TON)',
+                    over180     DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '180일 초과 (TON)',
+                    updated_at  DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    updated_by  VARCHAR(50)   DEFAULT 'system',
+                    UNIQUE KEY uk_aging_monthly (year_month)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='밀롤창고 월령분석 월말기준'
+            ''')
+            # ── 밀롤창고 월령분석 원본(I/F) 데이터 ──
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ps_millroll_aging_raw (
+                    id              INT AUTO_INCREMENT PRIMARY KEY,
+                    ref_date        DATE         NOT NULL COMMENT '기준일자 (I/F 전일자)',
+                    domestic        VARCHAR(20)  NOT NULL COMMENT '내수구분 (내수/수출)',
+                    paper_code      VARCHAR(20)  NOT NULL COMMENT '지종코드',
+                    basis_weight    INT          NOT NULL DEFAULT 0 COMMENT '평량',
+                    width           INT          NOT NULL DEFAULT 0 COMMENT '지폭(가로길이)',
+                    meter           DECIMAL(12,1) NOT NULL DEFAULT 0 COMMENT '미터수(권치수)',
+                    weight_kg       DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '중량 (KG)',
+                    warehouse_date  DATE         NULL COMMENT '창고입고일',
+                    updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_aging_raw_ref (ref_date),
+                    INDEX idx_aging_raw_wh (warehouse_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='밀롤창고 월령분석 원본(I/F) 데이터'
+            ''')
+        conn.commit()
+        print('[DB] 테이블 확인 완료 (slitter/recut_monthly, cutter_daily/target, millroll_aging)')
+    except Exception as e:
+        print(f'[DB] 테이블 생성 오류: {e}')
+    finally:
+        conn.close()
+
+
+# ─── 슬리터 월별 실적량 API ───
+
+@app.route('/api/slitter-monthly/load', methods=['GET'])
+def api_slitter_monthly_load():
+    """슬리터 월별 실적량 로드 — year 파라미터 필수"""
+    year = request.args.get('year', '').strip()
+    if not year:
+        return jsonify({'success': False, 'message': 'year 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT year_month, domestic, weight FROM ps_slitter_monthly '
+                    'WHERE year_month LIKE %s ORDER BY year_month, domestic',
+                    (year + '-%',)
+                )
+                rows = cursor.fetchall()
+            return jsonify({'success': True, 'data': {'year': year, 'rows': rows}})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(SLITTER_MONTHLY_FILE, {})
+    rows = []
+    for ym_key, record in all_data.items():
+        if ym_key.startswith(year + '-'):
+            rows.extend(record if isinstance(record, list) else record.get('rows', []))
+    return jsonify({'success': True, 'data': {'year': year, 'rows': rows}})
+
+
+@app.route('/api/slitter-monthly/save', methods=['POST'])
+def api_slitter_monthly_save():
+    """슬리터 월별 실적량 저장 — year_month, domestic, weight"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    rows = body.get('rows', [])
+    user_id = body.get('user_id', 'system')
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                for row in rows:
+                    cursor.execute(
+                        'INSERT INTO ps_slitter_monthly (year_month, domestic, weight, updated_by) '
+                        'VALUES (%s, %s, %s, %s) '
+                        'ON DUPLICATE KEY UPDATE weight = VALUES(weight), updated_by = VALUES(updated_by)',
+                        (row['year_month'], row['domestic'], row.get('weight', 0), user_id)
+                    )
+            conn.commit()
+            return jsonify({'success': True, 'message': '슬리터 월별 실적량 저장 완료'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(SLITTER_MONTHLY_FILE, {})
+    for row in rows:
+        ym = row.get('year_month', '')
+        if not ym:
+            continue
+        if ym not in all_data:
+            all_data[ym] = []
+        # 기존 동일 domestic 제거 후 추가
+        existing = [r for r in all_data[ym] if r.get('domestic') != row.get('domestic')]
+        existing.append({
+            'year_month': ym,
+            'domestic': row.get('domestic', ''),
+            'weight': row.get('weight', 0),
+        })
+        all_data[ym] = existing
+    save_json_file(SLITTER_MONTHLY_FILE, all_data)
+    return jsonify({'success': True, 'message': '슬리터 월별 실적량 저장 완료 (JSON)'})
+
+
+# ─── 수재단 월별 실적량 API ───
+
+@app.route('/api/recut-monthly/load', methods=['GET'])
+def api_recut_monthly_load():
+    """수재단 월별 실적량 로드 — year 파라미터 필수"""
+    year = request.args.get('year', '').strip()
+    if not year:
+        return jsonify({'success': False, 'message': 'year 파라미터 필요'}), 400
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    'SELECT year_month, domestic, weight FROM ps_recut_monthly '
+                    'WHERE year_month LIKE %s ORDER BY year_month, domestic',
+                    (year + '-%',)
+                )
+                rows = cursor.fetchall()
+            return jsonify({'success': True, 'data': {'year': year, 'rows': rows}})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(RECUT_MONTHLY_FILE, {})
+    rows = []
+    for ym_key, record in all_data.items():
+        if ym_key.startswith(year + '-'):
+            rows.extend(record if isinstance(record, list) else record.get('rows', []))
+    return jsonify({'success': True, 'data': {'year': year, 'rows': rows}})
+
+
+@app.route('/api/recut-monthly/save', methods=['POST'])
+def api_recut_monthly_save():
+    """수재단 월별 실적량 저장 — year_month, domestic, weight"""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'success': False, 'message': '요청 데이터 없음'}), 400
+
+    rows = body.get('rows', [])
+    user_id = body.get('user_id', 'system')
+
+    # DB 우선
+    conn = get_db_connection()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                for row in rows:
+                    cursor.execute(
+                        'INSERT INTO ps_recut_monthly (year_month, domestic, weight, updated_by) '
+                        'VALUES (%s, %s, %s, %s) '
+                        'ON DUPLICATE KEY UPDATE weight = VALUES(weight), updated_by = VALUES(updated_by)',
+                        (row['year_month'], row['domestic'], row.get('weight', 0), user_id)
+                    )
+            conn.commit()
+            return jsonify({'success': True, 'message': '수재단 월별 실적량 저장 완료'})
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+        finally:
+            conn.close()
+
+    # JSON 폴백
+    all_data = load_json_file(RECUT_MONTHLY_FILE, {})
+    for row in rows:
+        ym = row.get('year_month', '')
+        if not ym:
+            continue
+        if ym not in all_data:
+            all_data[ym] = []
+        existing = [r for r in all_data[ym] if r.get('domestic') != row.get('domestic')]
+        existing.append({
+            'year_month': ym,
+            'domestic': row.get('domestic', ''),
+            'weight': row.get('weight', 0),
+        })
+        all_data[ym] = existing
+    save_json_file(RECUT_MONTHLY_FILE, all_data)
+    return jsonify({'success': True, 'message': '수재단 월별 실적량 저장 완료 (JSON)'})
+
+
 if __name__ == '__main__':
     print('=' * 50)
     print('PS S&OP 계획 시스템 — 백엔드 서버 시작')
     print(f'데이터 저장 경로: {DATA_FILE}')
     print(f'기준일자: {today_str()}')
     print('=' * 50)
+    # DB 연결 시 월별 실적량 테이블 자동 생성
+    init_monthly_tables()
     app.run(host='0.0.0.0', port=8080, debug=False)
