@@ -8819,3 +8819,154 @@ td.number {
     color: #1e40af;
     border-radius: 0;
 }
+
+/* ── 180일 초과 리스트 테이블 ── */
+.over180-table-wrap {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.over180-table {
+    font-size: 0.82rem;
+}
+.over180-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f1f5f9 !important;
+    box-shadow: 0 1px 0 #e2e8f0;
+}
+.over180-table tbody td {
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+.over180-table tbody tr:hover {
+    background: #f8fafc;
+}
+.over180-group-code {
+    font-weight: 600;
+    vertical-align: middle;
+    text-align: center;
+    background: #fff;
+    border-top: 2px solid #cbd5e1;
+}
+.over180-group-cell {
+    vertical-align: middle;
+    text-align: center;
+    background: #fff;
+}
+.over180-table tbody tr:hover,
+.over180-table tbody tr {
+    background: #fff !important;
+}
+.over180-table tbody tr:hover td,
+.over180-table tbody tr td {
+    background: #fff !important;
+}
+/* over180 첫 번째 열: 틀고정/그림자 효과 제거 */
+.over180-table td:first-child {
+    position: static;
+    background: #fff !important;
+}
+.over180-table td:first-child::after {
+    display: none;
+}
+.over180-table tbody tr.over180-group-first td {
+    border-top: 2px solid #cbd5e1;
+}
+
+/* ── 카타 섹션 헤더-카드 간격 최소화 ── */
+[data-table-panel="cutter"] .section-header.planner-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+[data-table-panel="cutter"] .section-header.planner-header > div p {
+    margin-bottom: 0;
+}
+[data-table-panel="cutter"] > .slitter-card.subulbu-card:first-of-type {
+    margin-top: 8px;
+}
+
+/* ── 카타 일자별 재단실적 좌측 틀고정 ── */
+#cutter-daily-table .subulbu-th-label {
+    position: sticky;
+    left: 0;
+    z-index: 12;
+    background: #f5f7fb;
+    min-width: 120px;
+}
+#cutter-daily-table .subulbu-label {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    min-width: 120px;
+}
+#cutter-daily-table .subulbu-row-gye .subulbu-label {
+    background: #f0f4ff;
+}
+/* ── 카타 월별 재단실적 평균 (일자별 재단실적과 동일한 폰트/너비) ── */
+#cutter-monthly-table {
+    font-size: 0.84rem;
+}
+#cutter-monthly-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.84rem;
+}
+#cutter-monthly-table thead th:first-child {
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+}
+/* ── 카타 단폭/두폭 좌측 틀고정 ── */
+#cutter-width-table .subulbu-th-label {
+    position: sticky;
+    left: 0;
+    z-index: 12;
+    background: #f5f7fb;
+    min-width: 120px;
+}
+#cutter-width-table .subulbu-label {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    min-width: 120px;
+}
+#cutter-width-table .subulbu-row-gye .subulbu-label {
+    background: #f0f4ff;
+}
+/* ── 카타 월별 단폭/두폭 좌측 틀고정 ── */
+#cutter-width-monthly-table {
+    font-size: 0.84rem;
+}
+#cutter-width-monthly-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.84rem;
+}
+#cutter-width-monthly-table td:first-child::after {
+    display: none;
+}
+#cutter-width-monthly-table thead th:first-child {
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+}
+#cutter-monthly-table td:first-child::after {
+    display: none;
+}
